@@ -1,0 +1,44 @@
+========================================================================
+                      CSV STUDIO - INSTRUKCJA
+========================================================================
+
+CSV Studio to lekki, szybki program do przeglądania i edycji plików CSV,
+TSV i XLSX bez psujących się zer wiodących czy automatycznych dat.
+Aplikacja działa w 100% lokalnie na Twoim komputerze (offline).
+
+------------------------------------------------------------------------
+1. JAK URUCHOMIĆ:
+------------------------------------------------------------------------
+
+* SYSTEM WINDOWS:
+  -> Kliknij dwukrotnie plik: "Uruchom_Windows.bat" (lub "uruchom.vbs")
+
+* SYSTEM macOS (Apple Mac):
+  -> Kliknij dwukrotnie plik: "Uruchom_Mac.command"
+  (Jeśli macOS zablokuje pierwsze uruchomienie skryptu: kliknij na plik
+   Prawym Przyciskiem Myszy -> "Otwórz" -> potwierdź "Otwórz").
+
+* SYSTEM LINUX:
+  -> Uruchom w terminalu: ./Uruchom_Linux.sh
+
+------------------------------------------------------------------------
+2. INSTALACJA JAKO APLIKACJA NA PULPICIE (OPCJONALNIE):
+------------------------------------------------------------------------
+Po otwarciu w przeglądarce (Chrome / Edge / Safari / Brave):
+1. Kliknij ikonę monitora ze strzałką w pasku adresu (lub przycisk "Zainstaluj").
+2. Potwierdź instalację.
+3. Program pojawi się jako samodzielna ikonka na Twoim Pulpicie / Docku
+   i będzie działał bez konieczności uruchamiania skryptów!
+
+------------------------------------------------------------------------
+3. JAK WYSŁAĆ KOLEDZE / KOLEŻANCE W PRACY:
+------------------------------------------------------------------------
+Opcja A (w paczce ZIP):
+  Spakuj cały ten folder do pliku .zip i wyślij. Odbiorca po rozpakowaniu
+  klika po prostu "Uruchom_Windows.bat" lub "Uruchom_Mac.command".
+
+Opcja B (jako link www):
+  Możesz wrzucić zawartość tego folderu na dowolny darmowy hosting
+  (np. GitHub Pages, Vercel, Netlify) lub do firmowego intranetu.
+  Wtedy wysyłasz tylko link – program działa od razu w przeglądarce!
+========================================================================

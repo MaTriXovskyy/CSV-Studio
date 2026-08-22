@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="pl" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSV Studio</title>
+  
+  <!-- PWA & Mobile Web App Meta -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#107c41">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="CSV Studio">
+  <link rel="icon" type="image/png" sizes="256x256" href="assets/icon.png">
+  <link rel="apple-touch-icon" href="assets/icon-192.png">
+  
+  <!-- Lokalne arkusze stylów -->
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/toolbar.css">
+  <link rel="stylesheet" href="css/grid.css">
+  <link rel="stylesheet" href="css/modals.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Ukryty input do wyboru plików -->
+    <input type="file" id="fileInput" multiple accept=".csv,.tsv,.txt,.xlsx,.xls,.dsv" style="display: none;">
+
+    <!-- 1. Pasek górny (Nagłówek i Menu) -->
+    <header class="app-header">
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <div class="brand-section">
+          <span class="brand-icon"><i data-lucide="sheet" style="width:16px; height:16px;"></i></span>
+          <span>CSV Studio</span>
+        </div>
+
+        <nav class="menubar">
+          <!-- Menu Plik -->
+          <div class="menu-item" tabindex="0">
+            <span>Plik</span>
+            <div class="menu-dropdown">
+              <div class="dropdown-action" id="openFileMenuBtn">
+                <div class="dropdown-action-left">
+                  <i data-lucide="folder-open"></i>
+                  <span>Otwórz plik...</span>
+                </div>
+                <span class="shortcut">Ctrl+O</span>
+              </div>
+              <div class="dropdown-action" id="newTabMenuBtn" onclick="app.createNewTab('Arkusz_' + app.tabCounter + '.csv', app.generateEmptyData(25, 10))">
+                <div class="dropdown-action-left">
+                  <i data-lucide="file-plus"></i>
+                  <span>Nowy arkusz</span>
+                </div>
+                <span class="shortcut">Ctrl+N</span>
+              </div>
+              <div class="dropdown-divider"></div>
+              <div class="dropdown-action" onclick="document.getElementById('exportCsvBtn').click()">
+                <div class="dropdown-action-left">
+                  <i data-lucide="save"></i>
+                  <span>Zapisz</span>
+                </div>
+                <span class="shortcut">Ctrl+S</span>
+              </div>
+              <div class="dropdown-action" id="menuExportXlsxBtn">
+                <div class="dropdown-action-left">
+                  <i data-lucide="file-spreadsheet"></i>
+                  <span>Eksportuj do XLSX</span>
+                </div>
+              </div>
+              <div class="dropdown-divider"></div>
+              <div class="dropdown-action" id="menuCloseTabBtn">
+                <div class="dropdown-action-left">
+                  <i data-lucide="x"></i>
+                  <span>Zamknij arkusz</span>
+                </div>
+                <span class="shortcut">Ctrl+W</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Menu Edycja -->
+          <div class="menu-item" tabindex="0">
+            <span>Edycja</span>
+            <div class="menu-dropdown">
+              <div class="dropdown-action" onclick="document.getElementById('undoBtn').click()">
+                <div class="dropdown-action-left">
+                  <i data-lucide="undo-2"></i>
+                  <span>Cofnij</span>
+                </div>
+                <span class="shortcut">Ctrl+Z</span>
+              </div>
+              <div class="dropdown-action" onclick="document.getElementById('redoBtn').click()">
+                <div class="dropdown-action-left">
+                  <i data-lucide="redo-2"></i>
+                  <span>Ponów</span>
+                </div>
+                <span class="shortcut">Ctrl+Y</span>
+              </div>
+              <div class="dropdown-divider"></div>
+              <div class="dropdown-action" onclick="app.grid.selectAll()">
+                <div class="dropdown-action-left">
+                  <i data-lucide="scan-line"></i>
+                  <span>Zaznacz wszystko</span>
+                </div>
+                <span class="shortcut">Ctrl+A</span>
+              </div>
+              <div class="dropdown-action" onclick="app.grid.copySelection()">
+                <div class="dropdown-action-left">
+                  <i data-lucide="copy"></i>
+                  <span>Kopiuj</span>
+                </div>
+                <span class="shortcut">Ctrl+C</span>
+              </div>
+              <div class="dropdown-action" onclick="app.grid.clearSelection()">
+                <div class="dropdown-action-left">
+                  <i data-lucide="eraser"></i>
+                  <span>Wyczyść zaznaczenie</span>
+                </div>
+                <span class="shortcut">Del</span>
+              </div>
+              <div class="dropdown-divider"></div>
+              <div class="dropdown-action" onclick="document.getElementById('replaceBtn').click()">
+                <div class="dropdown-action-left">
+                  <i data-lucide="replace"></i>
+                  <span>Znajdź i zamień...</span>
+                </div>
+                <span class="shortcut">Ctrl+H</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Menu Narzędzia -->
+          <div class="menu-item" tabindex="0">
+            <span>Narzędzia</span>
+            <div class="menu-dropdown">
+              <div class="dropdown-action" onclick="app.grid.autoFitAllColumns()">
+                <div class="dropdown-action-left">
+                  <i data-lucide="scaling"></i>
+                  <span>Auto-dopasuj szerokości kolumn</span>
+                </div>
+              </div>
+              <div class="dropdown-action" onclick="app.grid.toggleWrapText()">
+                <div class="dropdown-action-left">
+                  <i data-lucide="wrap-text"></i>
+                  <span>Przełącz zawijanie tekstu</span>
+                </div>
+              </div>
+              <div class="dropdown-divider"></div>
+              <div class="dropdown-action" onclick="app.sortActiveColumn(true)">
+                <div class="dropdown-action-left">
+                  <i data-lucide="arrow-down-a-z"></i>
+                  <span>Sortuj rosnąco (A-Z / 0-9)</span>
+                </div>
+              </div>
+              <div class="dropdown-action" onclick="app.sortActiveColumn(false)">
+                <div class="dropdown-action-left">
+                  <i data-lucide="arrow-up-z-a"></i>
+                  <span>Sortuj malejąco (Z-A / 9-0)</span>
+                </div>
+              </div>
+              <div class="dropdown-divider"></div>
+              <div class="dropdown-action" id="cleanTrimBtn">
+                <div class="dropdown-action-left">
+                  <i data-lucide="scissors"></i>
+                  <span>Usuń zbędne spacje (Trim)</span>
+                </div>
+              </div>
+              <div class="dropdown-action" id="cleanDeduplicateBtn">
+                <div class="dropdown-action-left">
+                  <i data-lucide="copy-slash"></i>
+                  <span>Usuń zduplikowane wiersze</span>
+                </div>
+              </div>
+              <div class="dropdown-action" id="cleanEmptyRowsBtn">
+                <div class="dropdown-action-left">
+                  <i data-lucide="trash"></i>
+                  <span>Usuń całkowicie puste wiersze</span>
+                </div>
+              </div>
+              <div class="dropdown-divider"></div>
+              <div class="dropdown-action" id="copyMdBtn">
+                <div class="dropdown-action-left">
+                  <i data-lucide="clipboard-copy"></i>
+                  <span>Kopiuj tabelę Markdown</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Menu Pomoc -->
+          <div class="menu-item" tabindex="0">
+            <span>Pomoc</span>
+            <div class="menu-dropdown">
+              <div class="dropdown-action" id="shortcutsBtn">
+                <div class="dropdown-action-left">
+                  <i data-lucide="keyboard"></i>
+                  <span>Skróty klawiszowe</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </nav>
+      </div>
+
+      <div class="header-actions">
+        <button class="theme-toggle-btn" id="themeToggleBtn">
+          <i data-lucide="sun"></i>
+          <span>Jasny</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- 2. Karty otwartych plików (Multi-tab) -->
+    <div class="tabs-container" id="tabsContainer"></div>
+
+    <!-- 3. Główna wstążka narzędziowa (Toolbar Ribbon) -->
+    <div class="toolbar-ribbon">
+      <!-- Plik & Zapis -->
+      <div class="toolbar-group">
+        <button class="tool-btn" id="openFileBtn" title="Otwórz plik CSV/TSV/XLSX (Ctrl+O)">
+          <i data-lucide="folder-open"></i>
+          <span>Otwórz</span>
+        </button>
+        <button class="tool-btn" id="newTabBtn" title="Nowy pusty arkusz (Ctrl+N)">
+          <i data-lucide="file-plus"></i>
+          <span>Nowy</span>
+        </button>
+        <div class="toolbar-dropdown-wrapper">
+          <button class="tool-btn" id="exportCsvBtn" title="Zapisz plik (Ctrl+S) | PPM: Eksport do XLSX">
+            <i data-lucide="save"></i>
+            <span>Zapisz</span>
+          </button>
+          <div class="toolbar-dropdown-menu" id="saveContextMenu">
+            <div class="dropdown-action" id="saveMenuXlsxAction">
+              <div class="dropdown-action-left">
+                <i data-lucide="file-spreadsheet"></i>
+                <span>Eksportuj do XLSX (.xlsx)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Historia -->
+      <div class="toolbar-group">
+        <button class="tool-btn icon-only" id="undoBtn" title="Cofnij (Ctrl+Z)" disabled>
+          <i data-lucide="undo-2"></i>
+        </button>
+        <button class="tool-btn icon-only" id="redoBtn" title="Ponów (Ctrl+Y)" disabled>
+          <i data-lucide="redo-2"></i>
+        </button>
+      </div>
+
+      <!-- Auto-Dopasowanie & Układ -->
+      <div class="toolbar-group">
+        <button class="tool-btn" id="autoFitAllBtn" title="Dopasuj szerokości kolumn do tekstu (Auto-adjust)">
+          <i data-lucide="scaling"></i>
+          <span>Auto-dopasuj</span>
+        </button>
+        <button class="tool-btn" id="wrapTextBtn" title="Zawijaj długi tekst w komórkach">
+          <i data-lucide="wrap-text"></i>
+          <span>Zawijaj tekst</span>
+        </button>
+        <button class="tool-btn" id="headerToggleBtn" title="Użyj pierwszego wiersza jako nagłówków">
+          <i data-lucide="heading"></i>
+          <span>Wiersz 1 jako nagłówek</span>
+        </button>
+      </div>
+
+      <!-- Sortowanie, Szukanie, Statystyki -->
+      <div class="toolbar-group">
+        <button class="tool-btn" id="sortAscBtn" title="Sortuj zaznaczoną kolumnę rosnąco (A-Z)">
+          <i data-lucide="arrow-down-a-z"></i>
+          <span>A-Z</span>
+        </button>
+        <button class="tool-btn" id="sortDescBtn" title="Sortuj zaznaczoną kolumnę malejąco (Z-A)">
+          <i data-lucide="arrow-up-z-a"></i>
+          <span>Z-A</span>
+        </button>
+        <button class="tool-btn" id="searchBtn" title="Wyszukaj w arkuszu (Ctrl+F)">
+          <i data-lucide="search"></i>
+          <span>Szukaj</span>
+        </button>
+        <button class="tool-btn" id="replaceBtn" title="Znajdź i zamień (Ctrl+H)">
+          <i data-lucide="replace"></i>
+          <span>Zamień</span>
+        </button>
+        <button class="tool-btn" id="statsBtn" title="Statystyki i analityka kolumny">
+          <i data-lucide="bar-chart-2"></i>
+          <span>Statystyki</span>
+        </button>
+      </div>
+
+      <!-- Inteligentne Narzędzia Danych -->
+      <div class="toolbar-group">
+        <button class="tool-btn" id="filterToggleBtn" title="Włącz / Wyłącz lejki filtrowania kolumn (Excel AutoFilter)">
+          <i data-lucide="filter"></i>
+          <span>Filtry</span>
+        </button>
+        <button class="tool-btn" id="toggleEmptyColsBtn" title="Ukryj lub pokaż całkowicie puste kolumny">
+          <i data-lucide="eye-off"></i>
+          <span id="emptyColsBtnLabel">Ukryj puste</span>
+        </button>
+        <button class="tool-btn" id="fillDownBtn" title="Wypełnij w dół z komórki powyżej (Ctrl+D)">
+          <i data-lucide="arrow-down-to-dot"></i>
+          <span>Wypełnij w dół</span>
+        </button>
+      </div>
+
+      <!-- Szybki wybór Separatora i Kodowania -->
+      <div class="quick-select-wrapper">
+        <span>Separator:</span>
+        <select class="quick-select" id="quickDelimiterSelect" title="Separator CSV">
+          <option value=";">Średnik ( ; ) [Excel PL]</option>
+          <option value=",">Przecinek ( , )</option>
+          <option value="&#9;">Tabulator ( \t )</option>
+          <option value="|">Pionowa kreska ( | )</option>
+          <option value=":">Dwukropek ( : )</option>
+        </select>
+      </div>
+
+      <div class="quick-select-wrapper">
+        <span>Kodowanie:</span>
+        <select class="quick-select" id="quickEncodingSelect" title="Kodowanie pliku">
+          <option value="utf-8">UTF-8</option>
+          <option value="windows-1250">Windows-1250 (CP1250)</option>
+          <option value="iso-8859-2">ISO-8859-2</option>
+          <option value="windows-1252">Windows-1252</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 4. Pasek adresu komórki i edycji (Formula Bar) -->
+    <div class="formula-bar-container">
+      <div class="cell-address-box" id="cellAddressBox">A1</div>
+      <div class="formula-icon">fx</div>
+      <div class="formula-input-wrapper">
+        <input type="text" class="formula-input" id="formulaInput" placeholder="Wartość aktywnej komórki..." spellcheck="false">
+      </div>
+    </div>
+
+    <!-- 5. Główny obszar siatki arkusza -->
+    <main class="grid-container" id="gridContainer">
+      <!-- Wyszukiwanie Ctrl+F -->
+      <div class="search-banner hidden" id="searchBanner">
+        <i data-lucide="search" style="width:14px; height:14px; flex-shrink:0;"></i>
+        <input type="text" class="search-input" id="searchInput" placeholder="Szukaj tekstu (np. 17 lub &quot;17&quot;)...">
+        
+        <div class="search-options-group">
+          <button class="search-opt-btn" id="searchOptExact" title="Dopasuj całą komórkę (np. tylko 17, bez 176) lub użyj cudzysłowów &quot;17&quot;">
+            <span>[ = ]</span>
+          </button>
+          <button class="search-opt-btn" id="searchOptCase" title="Uwzględniaj wielkość liter (Aa)">
+            <span>Aa</span>
+          </button>
+          <button class="search-opt-btn" id="searchOptRegex" title="Wyrażenie regularne (.*)">
+            <span>.*</span>
+          </button>
+        </div>
+
+        <span class="search-count" id="searchCount">0 / 0</span>
+        <button class="tool-btn icon-only btn-sm" id="searchPrevBtn" title="Poprzedni (Shift+Enter)">
+          <i data-lucide="chevron-up"></i>
+        </button>
+        <button class="tool-btn icon-only btn-sm" id="searchNextBtn" title="Następny (Enter)">
+          <i data-lucide="chevron-down"></i>
+        </button>
+        <button class="tool-btn icon-only btn-sm" id="searchCloseBtn" title="Zamknij (Esc)">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+    </main>
+
+    <!-- Ekran powitalny / Strefa przeciągania plików (gdy brak kart) -->
+    <div class="empty-state-overlay hidden" id="emptyState">
+      <div class="dropzone-box" id="dropzoneBox">
+        <div class="dropzone-icon">
+          <i data-lucide="file-spreadsheet" class="lucide-xl"></i>
+        </div>
+        <div class="dropzone-title">Przeciągnij i upuść plik tutaj</div>
+        <div class="dropzone-actions">
+          <button class="btn btn-primary" id="dropzoneOpenBtn">
+            <i data-lucide="folder-open"></i>
+            <span>Wybierz plik z dysku</span>
+          </button>
+          <button class="btn btn-secondary" id="dropzoneNewBtn">
+            <i data-lucide="file-plus"></i>
+            <span>Utwórz pusty arkusz</span>
+          </button>
+        </div>
+        <div class="dropzone-formats-list">
+          <span class="format-pill">.csv</span>
+          <span class="format-pill">.tsv</span>
+          <span class="format-pill">.txt</span>
+          <span class="format-pill">.xlsx</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. Pasek boczny statystyk / analityki -->
+    <aside class="stats-drawer" id="statsDrawer">
+      <div class="stats-drawer-header">
+        <div style="font-weight:700; font-size:14px; display:flex; align-items:center; gap:6px;">
+          <i data-lucide="bar-chart-2"></i>
+          <span>Inspektor Kolumny</span>
+        </div>
+        <button class="modal-close-btn" id="closeStatsBtn">&times;</button>
+      </div>
+      <div class="stats-drawer-body">
+        <div class="stat-card">
+          <div class="stat-card-title">Kolumna</div>
+          <div class="stat-card-value" id="statColTitle" style="font-size:16px;">A</div>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-card-title">Wszystkie wiersze</div>
+            <div class="stat-card-value" id="statTotalRows">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-title">Wypełnione</div>
+            <div class="stat-card-value" id="statFilledRows" style="color:var(--success-color);">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-title">Puste</div>
+            <div class="stat-card-value" id="statEmptyRows" style="color:var(--text-muted);">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-title">Unikalne</div>
+            <div class="stat-card-value" id="statUniqueValues" style="color:var(--accent-primary);">0</div>
+          </div>
+        </div>
+
+        <div class="stat-card" id="statNumericCard" style="display: none;">
+          <div class="stat-card-title" style="margin-bottom: 8px;">Statystyki Numeryczne</div>
+          <div style="display: flex; flex-direction: column; gap: 6px; font-size: 12px;">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color:var(--text-muted);">Suma:</span>
+              <b id="statSum">0</b>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color:var(--text-muted);">Średnia:</span>
+              <b id="statAvg">0</b>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color:var(--text-muted);">Wartość minimalna:</span>
+              <b id="statMin">0</b>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color:var(--text-muted);">Wartość maksymalna:</span>
+              <b id="statMax">0</b>
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-card-title" style="margin-bottom: 8px;">Najczęstsze Wartości (Top 5)</div>
+          <div id="statTopValues" style="display: flex; flex-direction: column; gap: 4px;"></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 7. Pasek statusu na dole (Status Bar) -->
+    <footer class="status-bar">
+      <div class="status-left">
+        <div class="status-item" id="statusRowCol">Wiersze: 0 | Kolumny: 0</div>
+        <div class="status-item" id="statusSelection" style="color:var(--accent-primary); font-weight:600;"></div>
+        <div class="status-item" id="statusStats"></div>
+      </div>
+      <div class="status-right">
+        <div class="status-badge" id="statusDelimiter" title="Kliknij, aby zmienić separator">Separator: ;</div>
+        <div class="status-badge" id="statusEncoding" title="Kodowanie pliku">UTF-8</div>
+      </div>
+    </footer>
+
+    <!-- Okno modalne: Wyszukaj i zamień -->
+    <div class="modal-overlay" id="replaceModal">
+      <div class="modal-box">
+        <div class="modal-header">
+          <div class="modal-title" style="display:flex; align-items:center; gap:6px;">
+            <i data-lucide="replace"></i>
+            <span>Znajdź i zamień</span>
+          </div>
+          <button class="modal-close-btn" id="closeReplaceModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Szukany tekst:</label>
+            <input type="text" class="form-input" id="replaceFindInput" placeholder="Wpisz frazę do wyszukania...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Zamień na:</label>
+            <input type="text" class="form-input" id="replaceWithInput" placeholder="Wpisz nowy tekst...">
+          </div>
+          <div style="display:flex; flex-wrap:wrap; gap:16px; margin-top:4px;">
+            <label class="form-checkbox-label">
+              <input type="checkbox" class="form-checkbox" id="replaceExactCell">
+              <span>Dopasuj całą komórkę</span>
+            </label>
+            <label class="form-checkbox-label">
+              <input type="checkbox" class="form-checkbox" id="replaceCaseSensitive">
+              <span>Uwzględniaj wielkość liter</span>
+            </label>
+            <label class="form-checkbox-label">
+              <input type="checkbox" class="form-checkbox" id="replaceRegex">
+              <span>Wyrażenie regularne (Regex)</span>
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="document.getElementById('replaceModal').classList.remove('active')">Anuluj</button>
+          <button class="btn btn-primary" id="doReplaceAllBtn">
+            <i data-lucide="check"></i>
+            <span>Zamień wszystko</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Okno modalne: Skróty klawiszowe -->
+    <div class="modal-overlay" id="shortcutsModal">
+      <div class="modal-box" style="max-width: 580px;">
+        <div class="modal-header">
+          <div class="modal-title" style="display:flex; align-items:center; gap:6px;">
+            <i data-lucide="keyboard"></i>
+            <span>Skróty klawiszowe</span>
+          </div>
+          <button class="modal-close-btn" id="closeShortcutsModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="shortcuts-grid">
+            <div class="shortcut-row">
+              <span>Nawigacja po komórkach</span>
+              <span class="kbd">Strzałki</span>
+            </div>
+            <div class="shortcut-row">
+              <span>Skok do krawędzi arkusza</span>
+              <span class="kbd">Ctrl + Strzałki</span>
+            </div>
+            <div class="shortcut-row">
+              <span>Skok do komórki A1 / końca</span>
+              <span class="kbd">Ctrl + Home / End</span>
+            </div>
+            <div class="shortcut-row">
+              <span>Następna komórka (poziomo)</span>
+              <span class="kbd">Tab / Shift+Tab</span>
+            </div>
+            <div class="shortcut-row">
+              <span>Następna komórka (pionowo)</span>
+              <span class="kbd">Enter / Shift+Enter</span>
+            </div>
+            <div class="shortcut-row">
+              <span>Edycja aktywnej komórki</span>
+              <span class="kbd">F2 / Podwójny klik</span>
+            </div>
+            <div class="shortcut-row">
+              <span>Zaznacz zakres komórek / wierszy</span>
+              <span class="kbd">Shift + Strzałki / Klik</span>
+            </div>
+            <div class="shortcut-row">
+              <span>Zaznacz wszystko</span>
+              <span class="kbd">Ctrl + A</span>
+            </div>
+            <div class="shortcut-row">
+              <span>Kopiuj zaznaczenie / wiersz</span>
+              <span class="kbd">Ctrl + C</span>
+            </div>
+            <div class="shortcut-row">
+              <span>Wytnij zaznaczenie / wiersz</span>
+              <span class="kbd">Ctrl + X</span>
+            </div>
+            <div class="shortcut-row">
+              <span>Wklej ze schowka</span>
+              <span class="kbd">Ctrl + V</span>
+            </div>
+            <div class="shortcut-row">
+              <span>Wyczyść zawartość</span>
+              <span class="kbd">Del / Backspace</span>
+            </div>
+            <div class="shortcut-row">
+              <span>Anuluj ramkę schowka / Edycję</span>
+              <span class="kbd">Esc</span>
+            </div>
+            <div class="shortcut-row">
+              <span>Cofnij zmianę</span>
+              <span class="kbd">Ctrl + Z</span>
+            </div>
+            <div class="shortcut-row">
+              <span>Ponów zmianę</span>
+              <span class="kbd">Ctrl + Y</span>
+            </div>
+            <div class="shortcut-row">
+              <span>Szukaj tekstu</span>
+              <span class="kbd">Ctrl + F</span>
+            </div>
+            <div class="shortcut-row">
+              <span>Znajdź i zamień</span>
+              <span class="kbd">Ctrl + H</span>
+            </div>
+            <div class="shortcut-row">
+              <span>Wypełnij w dół (Fill Down)</span>
+              <span class="kbd">Ctrl + D</span>
+            </div>
+            <div class="shortcut-row">
+              <span>Zapisz plik CSV</span>
+              <span class="kbd">Ctrl + S</span>
+            </div>
+            <div class="shortcut-row">
+              <span>Otwórz plik z dysku</span>
+              <span class="kbd">Ctrl + O</span>
+            </div>
+            <div class="shortcut-row">
+              <span>Nowy pusty arkusz</span>
+              <span class="kbd">Ctrl + N</span>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" onclick="document.getElementById('shortcutsModal').classList.remove('active')">Rozumiem</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Okno modalne: Niezapisane zmiany -->
+    <div class="modal-overlay" id="unsavedModal">
+      <div class="modal-box" style="max-width: 440px;">
+        <div class="modal-header">
+          <div class="modal-title" style="display:flex; align-items:center; gap:8px; color:var(--warning-color, #f59e0b);">
+            <i data-lucide="alert-triangle"></i>
+            <span>Niezapisane zmiany</span>
+          </div>
+          <button class="modal-close-btn" id="closeUnsavedModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p id="unsavedModalText" style="font-size:13px; line-height:1.5; color:var(--text-primary); margin:0;">
+            Plik zawiera niezapisane zmiany. Czy chcesz je zapisać przed zamknięciem?
+          </p>
+        </div>
+        <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:8px;">
+          <button class="btn btn-secondary" id="unsavedCancelBtn">Anuluj</button>
+          <button class="btn btn-secondary" id="unsavedDiscardBtn" style="color:var(--danger-color, #ef4444); border-color:var(--border-color);">Nie zapisuj</button>
+          <button class="btn btn-primary" id="unsavedSaveBtn">
+            <i data-lucide="save"></i>
+            <span>Zapisz</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Okno wyskakujące filtra Excel (Filter Popover) -->
+    <div class="filter-popup" id="filterPopup">
+      <div class="filter-popup-header">
+        <span id="filterPopupTitle" style="font-weight:600;">Filtruj kolumnę</span>
+        <button class="icon-btn-sm" id="closeFilterPopupBtn" title="Zamknij" style="background:none; border:none; cursor:pointer; color:var(--text-muted);"><i data-lucide="x" style="width:14px; height:14px;"></i></button>
+      </div>
+      <input type="text" class="filter-search-input" id="filterSearchInput" placeholder="Szukaj wartości...">
+      <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; padding: 0 2px;">
+        <label style="display:flex; align-items:center; gap:5px; cursor:pointer; user-select:none;">
+          <input type="checkbox" id="filterSelectAllCheckbox" checked>
+          <span>(Zaznacz wszystko)</span>
+        </label>
+        <span id="filterPopupCount" style="color:var(--text-muted); font-size:10px;">0 pozycji</span>
+      </div>
+      <div class="filter-values-list" id="filterValuesList"></div>
+      <div class="filter-popup-footer">
+        <button class="filter-btn-sm" id="clearColFilterBtn">Wyczyść</button>
+        <button class="filter-btn-sm primary" id="applyColFilterBtn">Zastosuj</button>
+      </div>
+    </div>
+
+    <!-- Kontener na powiadomienia Toast -->
+    <div class="toast-container" id="toastContainer"></div>
+  </div>
+
+  <!-- Skrypty vendorowe (lokalne, 100% offline) -->
+  <script src="js/vendor/lucide.min.js"></script>
+  <script src="js/vendor/papaparse.min.js"></script>
+  <script src="js/vendor/xlsx.full.min.js"></script>
+
+  <!-- Moduły aplikacji -->
+  <script src="js/storage.js"></script>
+  <script src="js/parser.js"></script>
+  <script src="js/history.js"></script>
+  <script src="js/stats.js"></script>
+  <script src="js/operations.js"></script>
+  <script src="js/export.js"></script>
+  
+  <!-- Moduły silnika arkusza CSVGrid -->
+  <script src="js/grid/grid-core.js"></script>
+  <script src="js/grid/grid-render.js"></script>
+  <script src="js/grid/grid-selection.js"></script>
+  <script src="js/grid/grid-clipboard.js"></script>
+  <script src="js/grid/grid-editor.js"></script>
+  <script src="js/grid/grid-contextmenu.js"></script>
+  <script src="js/grid/grid-events.js"></script>
+  <script src="js/grid.js"></script>
+  
+  <script src="js/app.js"></script>
+
+  <!-- Rejestracja PWA Service Workera -->
+  <script>
+    if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch((err) => {
+          console.warn('Błąd rejestracji Service Workera:', err);
+        });
+      });
+    }
+  </script>
+</body>
+</html>

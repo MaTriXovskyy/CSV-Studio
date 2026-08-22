@@ -1,0 +1,532 @@
+/* Main Spreadsheet Grid Container */
+.grid-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+}
+
+.spreadsheet-wrapper {
+  flex: 1;
+  position: relative;
+  overflow: auto;
+  outline: none;
+  background-color: var(--bg-secondary);
+}
+
+/* Virtual Scroll canvas / table container */
+.virtual-grid-sizer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* Table styling for virtualized view */
+.csv-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--text-primary);
+  background-color: var(--bg-secondary);
+}
+
+/* Sticky Corner Header */
+.csv-th-corner {
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 40;
+  width: var(--header-col-width);
+  min-width: var(--header-col-width);
+  max-width: var(--header-col-width);
+  height: var(--header-row-height);
+  background-color: var(--header-bg);
+  border-right: 1px solid var(--border-header);
+  border-bottom: 1px solid var(--border-header);
+  cursor: pointer;
+  padding: 0;
+  text-align: center;
+  vertical-align: middle;
+  box-sizing: border-box;
+}
+
+.csv-th-corner .corner-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--text-muted);
+}
+
+.csv-th-corner:hover .corner-content {
+  background-color: var(--header-hover);
+  color: var(--accent-primary);
+}
+
+/* Sticky Column Headers (A, B, C...) */
+.csv-th-col {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: var(--header-row-height);
+  background-color: var(--header-bg);
+  border-right: 1px solid var(--border-header);
+  border-bottom: 1px solid var(--border-header);
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--header-text);
+  text-align: center;
+  padding: 0;
+  overflow: hidden;
+  user-select: none;
+  cursor: pointer;
+  box-sizing: border-box;
+  vertical-align: middle;
+}
+
+.csv-th-col.selected {
+  background-color: var(--header-selected);
+  color: var(--accent-text);
+  border-bottom: 2px solid var(--accent-primary);
+}
+
+.csv-th-col:hover {
+  background-color: var(--header-hover);
+}
+
+.th-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+  padding: 0 6px;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.th-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  text-align: center;
+}
+
+.th-sublabel {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: normal;
+  margin-left: 4px;
+}
+
+/* Resize handle for columns */
+.col-resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 25;
+}
+
+.col-resize-handle:hover,
+.col-resize-handle.active {
+  background-color: var(--accent-primary);
+}
+
+/* Sticky Row Headers (1, 2, 3...) */
+.csv-th-row {
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  width: var(--header-col-width);
+  min-width: var(--header-col-width);
+  max-width: var(--header-col-width);
+  height: var(--default-cell-height);
+  background-color: var(--header-bg);
+  border-right: 1px solid var(--border-header);
+  border-bottom: 1px solid var(--border-grid);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-align: center;
+  vertical-align: middle;
+  user-select: none;
+  cursor: pointer;
+  box-sizing: border-box;
+  padding: 0 4px;
+}
+
+.csv-th-row.selected {
+  background-color: var(--header-selected);
+  color: var(--accent-text);
+  border-right: 2px solid var(--accent-primary);
+}
+
+.csv-th-row:hover {
+  background-color: var(--header-hover);
+}
+
+/* Cells */
+.csv-td {
+  height: var(--default-cell-height);
+  border-right: 1px solid var(--border-grid);
+  border-bottom: 1px solid var(--border-grid);
+  padding: 2px 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+  background-color: var(--bg-secondary);
+  font-size: 12px;
+  cursor: cell;
+  box-sizing: border-box;
+  position: relative;
+}
+
+/* Zawijanie tekstu w komórkach */
+.csv-table.wrap-text .csv-td {
+  white-space: normal;
+  word-break: break-word;
+  vertical-align: top;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+.csv-td.active-cell {
+  outline: 2px solid var(--cell-focus-outline);
+  outline-offset: -2px;
+  z-index: 5;
+}
+
+.csv-td.selected-cell {
+  background-color: var(--bg-selected);
+}
+
+.csv-td.search-match {
+  background-color: #fef08a !important;
+  color: #854d0e !important;
+  font-weight: 600;
+}
+
+.csv-td.search-current {
+  background-color: #f59e0b !important;
+  color: #ffffff !important;
+  font-weight: 700;
+}
+
+/* Zablokowane wiersze i kolumny (Freeze Panes) */
+.csv-td.frozen-col,
+.csv-td.frozen-row,
+.csv-td.frozen-intersection {
+  background-color: var(--bg-secondary);
+}
+
+.freeze-col-divider {
+  border-right: 2px solid var(--accent-primary) !important;
+}
+
+.freeze-row-divider {
+  border-bottom: 2px solid var(--accent-primary) !important;
+}
+
+.csv-th-col.freeze-col-divider {
+  border-right: 2px solid var(--accent-primary) !important;
+}
+
+.csv-th-row.freeze-row-divider {
+  border-bottom: 2px solid var(--accent-primary) !important;
+}
+
+/* Zielony kwadracik przeciągania w dół / serii (Excel Fill Handle) */
+.fill-handle {
+  position: absolute;
+  z-index: 45;
+  width: 7px;
+  height: 7px;
+  background-color: var(--accent-primary);
+  border: 1px solid #ffffff;
+  cursor: crosshair;
+  pointer-events: auto;
+  box-sizing: border-box;
+}
+
+.fill-preview-box {
+  position: absolute;
+  z-index: 40;
+  border: 1.5px dashed var(--accent-primary);
+  background-color: rgba(16, 124, 65, 0.08);
+  pointer-events: none;
+  display: none;
+}
+
+/* Animowana przerywana ramka dla skopiowanego zakresu / wiersza (Excel Marching Ants) */
+.clipboard-marching-ants {
+  position: absolute;
+  z-index: 38;
+  pointer-events: none;
+  display: none;
+  box-sizing: border-box;
+  background-image:
+    linear-gradient(90deg, var(--accent-primary) 50%, transparent 50%),
+    linear-gradient(90deg, var(--accent-primary) 50%, transparent 50%),
+    linear-gradient(0deg, var(--accent-primary) 50%, transparent 50%),
+    linear-gradient(0deg, var(--accent-primary) 50%, transparent 50%);
+  background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
+  background-size: 8px 2px, 8px 2px, 2px 8px, 2px 8px;
+  background-position: 0 0, 0 100%, 0 0, 100% 0;
+  animation: excelMarchingAnts 0.6s linear infinite;
+  border-radius: 1px;
+}
+
+@keyframes excelMarchingAnts {
+  0% {
+    background-position: 0 0, 8px 100%, 0 8px, 100% 0;
+  }
+  100% {
+    background-position: 8px 0, 0 100%, 0 0, 100% 8px;
+  }
+}
+
+/* Przycisk AutoFilter w nagłówku kolumny */
+.col-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  color: var(--text-muted);
+  cursor: pointer;
+  margin-left: 2px;
+  transition: all 0.1s ease;
+}
+
+.col-filter-btn:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.col-filter-btn.active {
+  background-color: var(--accent-primary);
+  color: #ffffff;
+}
+
+/* Okno wyskakujące filtra Excel (Filter Popover) */
+.filter-popup {
+  position: fixed;
+  z-index: 6000;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: var(--shadow-xl);
+  width: 280px;
+  display: none;
+  flex-direction: column;
+  padding: 8px;
+  gap: 8px;
+  animation: fadeIn 0.12s ease forwards;
+}
+
+.filter-popup.show {
+  display: flex;
+}
+
+.filter-popup-header {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.filter-search-input {
+  width: 100%;
+  height: 26px;
+  padding: 0 8px;
+  font-size: 11px;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  outline: none;
+}
+
+.filter-search-input:focus {
+  border-color: var(--accent-primary);
+}
+
+.filter-values-list {
+  max-height: 180px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 0;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--bg-primary);
+}
+
+.filter-value-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  border-radius: 3px;
+  user-select: none;
+}
+
+.filter-value-item:hover {
+  background-color: var(--bg-hover);
+}
+
+.filter-value-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filter-value-count {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.filter-popup-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border-color);
+}
+
+.filter-btn-sm {
+  height: 24px;
+  padding: 0 8px;
+  font-size: 11px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.filter-btn-sm.primary {
+  background-color: var(--accent-primary);
+  color: #ffffff;
+  border-color: var(--accent-primary);
+}
+
+/* Ukryte kolumny */
+.csv-th-col.hidden-col,
+.csv-td.hidden-col {
+  display: none !important;
+}
+
+/* Cell Inline Editor */
+.cell-editor {
+  position: absolute;
+  z-index: 50;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 2px solid var(--accent-primary);
+  box-shadow: var(--shadow-md);
+  padding: 3px 7px;
+  font-size: 12px;
+  font-family: var(--font-sans);
+  outline: none;
+  box-sizing: border-box;
+  resize: none;
+  overflow: hidden;
+}
+
+/* Right-Click Context Menu */
+.context-menu {
+  position: fixed;
+  z-index: 5000;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: var(--shadow-xl);
+  padding: 5px;
+  min-width: 220px;
+  display: none;
+  animation: fadeIn 0.1s ease forwards;
+}
+
+.context-menu.show {
+  display: block;
+}
+
+.context-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-primary);
+  text-decoration: none;
+  gap: 12px;
+  transition: all 0.1s ease;
+}
+
+.context-item-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.context-item:hover {
+  background-color: var(--bg-hover);
+  color: var(--accent-text);
+}
+
+.context-item .shortcut {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.context-item.danger {
+  color: var(--danger-color);
+}
+
+.context-item.danger:hover {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.context-divider {
+  height: 1px;
+  background-color: var(--border-color);
+  margin: 4px 0;
+}
+
+.context-header {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 4px 10px 2px 10px;
+  letter-spacing: 0.5px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}

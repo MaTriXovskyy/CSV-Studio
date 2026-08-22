@@ -1,0 +1,22 @@
+{
+  "name": "csv-studio",
+  "version": "1.0.0",
+  "description": "Nowoczesny edytor i analityk arkuszy CSV, TSV i XLSX (PWA)",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "csv",
+    "editor",
+    "pim",
+    "spreadsheet",
+    "pwa"
+  ],
+  "author": "matrixovskyy",
+  "license": "MIT",
+  "dependencies": {
+    "lucide": "^1.33.0",
+    "papaparse": "^5.6.0",
+    "xlsx": "^0.18.5"
+  }
+}
