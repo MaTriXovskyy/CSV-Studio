@@ -320,7 +320,7 @@
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 10px 12px;
-  max-height: 150px;
+  max-height: 190px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
