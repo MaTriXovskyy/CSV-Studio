@@ -489,9 +489,23 @@
           </div>
           <div class="form-group">
             <label class="form-label">Zamień na:</label>
-            <input type="text" class="form-input" id="replaceWithInput" placeholder="Wpisz nowy tekst...">
+            <input type="text" class="form-input" id="replaceWithInput" placeholder="Wpisz nowy tekst (lub puste, aby usunąć)...">
           </div>
-          <div style="display:flex; flex-wrap:wrap; gap:16px; margin-top:4px;">
+          <div class="form-group">
+            <label class="form-label">Zakres zamiany:</label>
+            <div class="scope-selector-group">
+              <label class="scope-option">
+                <input type="radio" name="replaceScope" value="all" id="replaceScopeAll" checked>
+                <span>Cały arkusz</span>
+              </label>
+              <label class="scope-option">
+                <input type="radio" name="replaceScope" value="selection" id="replaceScopeSelection">
+                <span>Tylko zaznaczone komórki</span>
+                <span class="scope-badge" id="replaceSelectionBadge">A1 (1 komórka)</span>
+              </label>
+            </div>
+          </div>
+          <div style="display:flex; flex-wrap:wrap; gap:16px; margin-top:2px;">
             <label class="form-checkbox-label">
               <input type="checkbox" class="form-checkbox" id="replaceExactCell">
               <span>Dopasuj całą komórkę</span>
@@ -507,10 +521,10 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-secondary" onclick="document.getElementById('replaceModal').classList.remove('active')">Anuluj</button>
+          <button class="btn btn-secondary" id="cancelReplaceBtn">Anuluj</button>
           <button class="btn btn-primary" id="doReplaceAllBtn">
             <i data-lucide="check"></i>
-            <span>Zamień wszystko</span>
+            <span id="doReplaceBtnText">Zamień wszystko</span>
           </button>
         </div>
       </div>

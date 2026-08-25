@@ -193,6 +193,11 @@
           <span class="shortcut">Del</span>
         </div>
         <div class="context-divider"></div>
+        <div class="context-item" data-action="replaceInSelection">
+          <div class="context-item-left"><i data-lucide="replace"></i><span>Znajdź i zamień w wierszach...</span></div>
+          <span class="shortcut">Ctrl+H</span>
+        </div>
+        <div class="context-divider"></div>
         <div class="context-item danger" data-action="deleteRow">
           <div class="context-item-left"><i data-lucide="trash-2"></i><span>${deleteLabel}</span></div>
         </div>
@@ -271,6 +276,10 @@
         <div class="context-item" data-action="copy">
           <div class="context-item-left"><i data-lucide="copy"></i><span>${copyLabel}</span></div>
           <span class="shortcut">Ctrl+C</span>
+        </div>
+        <div class="context-item" data-action="replaceInSelection">
+          <div class="context-item-left"><i data-lucide="replace"></i><span>Znajdź i zamień w kolumnie...</span></div>
+          <span class="shortcut">Ctrl+H</span>
         </div>
         ${!isMultiCol ? `
         <div class="context-item" data-action="sortAsc">
@@ -353,6 +362,11 @@
         <div class="context-item" data-action="clear">
           <div class="context-item-left"><i data-lucide="eraser"></i><span>${clearLabel}</span></div>
           <span class="shortcut">Del</span>
+        </div>
+        <div class="context-divider"></div>
+        <div class="context-item" data-action="replaceInSelection">
+          <div class="context-item-left"><i data-lucide="replace"></i><span>Znajdź i zamień w zaznaczeniu...</span></div>
+          <span class="shortcut">Ctrl+H</span>
         </div>
         <div class="context-divider"></div>
         <div class="context-item" data-action="freezePanesHere">

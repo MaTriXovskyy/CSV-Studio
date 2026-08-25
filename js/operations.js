@@ -239,7 +239,7 @@ const CSVOperations = {
     const rawQuery = String(query);
     if (rawQuery === '') return [];
 
-    let { caseSensitive = false, isRegex = false, exactCell = false } = options;
+    let { caseSensitive = false, isRegex = false, exactCell = false, coords = null } = options;
     const matches = [];
 
     let actualQuery = rawQuery;
@@ -261,6 +261,34 @@ const CSVOperations = {
       regex = isRegex ? new RegExp(actualQuery, caseSensitive ? 'g' : 'gi') : null;
     } catch (e) {
       return [];
+    }
+
+    if (coords && Array.isArray(coords)) {
+      for (const coord of coords) {
+        const r = coord.row;
+        const c = coord.col;
+        if (r < 0 || r >= data.length || !data[r] || c < 0 || c >= data[r].length) continue;
+        const cell = String(data[r][c] !== undefined && data[r][c] !== null ? data[r][c] : '');
+        let isMatch = false;
+
+        if (regex) {
+          isMatch = regex.test(cell);
+          regex.lastIndex = 0;
+        } else if (exactCell) {
+          isMatch = caseSensitive 
+            ? cell.trim() === actualQuery.trim() 
+            : cell.trim().toLowerCase() === actualQuery.trim().toLowerCase();
+        } else {
+          isMatch = caseSensitive 
+            ? cell.includes(actualQuery) 
+            : cell.toLowerCase().includes(actualQuery.toLowerCase());
+        }
+
+        if (isMatch) {
+          matches.push({ row: r, col: c, value: cell });
+        }
+      }
+      return matches;
     }
 
     for (let r = 0; r < data.length; r++) {
@@ -296,7 +324,7 @@ const CSVOperations = {
   replaceAll(data, findText, replaceText, options = {}) {
     if (!data || findText === undefined || findText === null || String(findText) === '') return { count: 0, changes: [] };
 
-    let { caseSensitive = false, isRegex = false, exactCell = false } = options;
+    let { caseSensitive = false, isRegex = false, exactCell = false, coords = null } = options;
     const rawFind = String(findText);
     let actualFind = rawFind;
     const trimmed = rawFind.trim();
@@ -310,7 +338,7 @@ const CSVOperations = {
       }
     }
 
-    const matches = this.search(data, actualFind, { caseSensitive, isRegex, exactCell });
+    const matches = this.search(data, actualFind, { caseSensitive, isRegex, exactCell, coords });
 
     let regex;
     if (isRegex) {

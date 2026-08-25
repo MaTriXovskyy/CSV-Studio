@@ -1176,6 +1176,10 @@ class CSVApp {
         this.showToast('Wypełniono wartości w dół', 'info');
         break;
       }
+
+      case 'replaceInSelection':
+        this.openReplaceModal('selection');
+        break;
     }
   }
 
@@ -2008,6 +2012,64 @@ class CSVApp {
     };
   }
 
+  openReplaceModal(forceScope = null) {
+    const replaceModal = document.getElementById('replaceModal');
+    const replaceFindInput = document.getElementById('replaceFindInput');
+    const replaceWithInput = document.getElementById('replaceWithInput');
+    const replaceScopeAll = document.getElementById('replaceScopeAll');
+    const replaceScopeSelection = document.getElementById('replaceScopeSelection');
+    const replaceSelectionBadge = document.getElementById('replaceSelectionBadge');
+
+    if (!replaceModal) return;
+    replaceModal.classList.add('active');
+
+    const searchVal = document.getElementById('searchInput')?.value || '';
+    const cellVal = this.grid ? this.grid.getActiveCellValue() : '';
+    if (!replaceFindInput.value && (searchVal || cellVal)) {
+      replaceFindInput.value = searchVal || cellVal;
+    }
+
+    let hasMultiSelection = false;
+    if (this.grid) {
+      const summary = this.grid.getSelectionSummary();
+      if (replaceSelectionBadge) {
+        replaceSelectionBadge.textContent = summary.fullLabel;
+      }
+      hasMultiSelection = summary.cellCount > 1 || this.grid.selectionType === 'row' || this.grid.selectionType === 'col';
+    }
+
+    if (forceScope === 'selection') {
+      if (replaceScopeSelection) replaceScopeSelection.checked = true;
+    } else if (forceScope === 'all') {
+      if (replaceScopeAll) replaceScopeAll.checked = true;
+    } else {
+      if (hasMultiSelection && replaceScopeSelection) {
+        replaceScopeSelection.checked = true;
+      } else if (replaceScopeAll) {
+        replaceScopeAll.checked = true;
+      }
+    }
+
+    this.updateReplaceBtnLabel();
+
+    setTimeout(() => {
+      replaceFindInput.focus();
+      replaceFindInput.select();
+    }, 50);
+  }
+
+  updateReplaceBtnLabel() {
+    const doReplaceBtnText = document.getElementById('doReplaceBtnText');
+    const replaceScopeSelection = document.getElementById('replaceScopeSelection');
+    if (!doReplaceBtnText) return;
+
+    if (replaceScopeSelection && replaceScopeSelection.checked) {
+      doReplaceBtnText.textContent = 'Zamień w zaznaczeniu';
+    } else {
+      doReplaceBtnText.textContent = 'Zamień wszystko (cały arkusz)';
+    }
+  }
+
   bindModals() {
     const shortcutsModal = document.getElementById('shortcutsModal');
     document.getElementById('shortcutsBtn')?.addEventListener('click', () => {
@@ -2021,37 +2083,30 @@ class CSVApp {
     const replaceFindInput = document.getElementById('replaceFindInput');
     const replaceWithInput = document.getElementById('replaceWithInput');
 
-    const openReplaceModal = () => {
-      replaceModal.classList.add('active');
-      const searchVal = document.getElementById('searchInput')?.value || '';
-      const cellVal = this.grid ? this.grid.getActiveCellValue() : '';
-      if (!replaceFindInput.value && (searchVal || cellVal)) {
-        replaceFindInput.value = searchVal || cellVal;
-      }
-      setTimeout(() => {
-        replaceFindInput.focus();
-        replaceFindInput.select();
-      }, 50);
-    };
+    document.getElementById('replaceScopeAll')?.addEventListener('change', () => this.updateReplaceBtnLabel());
+    document.getElementById('replaceScopeSelection')?.addEventListener('change', () => this.updateReplaceBtnLabel());
 
-    document.getElementById('replaceBtn').addEventListener('click', openReplaceModal);
-    document.getElementById('closeReplaceModal').addEventListener('click', () => {
-      replaceModal.classList.remove('active');
+    document.getElementById('replaceBtn')?.addEventListener('click', () => this.openReplaceModal());
+    document.getElementById('closeReplaceModal')?.addEventListener('click', () => {
+      replaceModal?.classList.remove('active');
+    });
+    document.getElementById('cancelReplaceBtn')?.addEventListener('click', () => {
+      replaceModal?.classList.remove('active');
     });
 
     const handleReplaceEnter = (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        document.getElementById('doReplaceAllBtn').click();
+        document.getElementById('doReplaceAllBtn')?.click();
       } else if (e.key === 'Escape') {
-        replaceModal.classList.remove('active');
+        replaceModal?.classList.remove('active');
       }
     };
 
-    replaceFindInput.addEventListener('keydown', handleReplaceEnter);
-    replaceWithInput.addEventListener('keydown', handleReplaceEnter);
+    replaceFindInput?.addEventListener('keydown', handleReplaceEnter);
+    replaceWithInput?.addEventListener('keydown', handleReplaceEnter);
 
-    document.getElementById('doReplaceAllBtn').addEventListener('click', () => {
+    document.getElementById('doReplaceAllBtn')?.addEventListener('click', () => {
       const tab = this.getActiveTab();
       if (!tab) return;
 
@@ -2060,13 +2115,28 @@ class CSVApp {
       const caseSensitive = document.getElementById('replaceCaseSensitive').checked;
       const isRegex = document.getElementById('replaceRegex').checked;
       const exactCell = document.getElementById('replaceExactCell')?.checked || false;
+      const isSelectionScope = document.getElementById('replaceScopeSelection')?.checked || false;
 
-      if (!findText) return;
+      if (!findText) {
+        this.showToast('Wpisz frazę do wyszukania', 'warning');
+        replaceFindInput.focus();
+        return;
+      }
+
+      let coords = null;
+      if (isSelectionScope && this.grid) {
+        coords = this.grid.getSelectedCoordinates();
+        if (!coords || coords.length === 0) {
+          this.showToast('Brak zaznaczonych komórek do zamiany', 'warning');
+          return;
+        }
+      }
 
       const result = CSVOperations.replaceAll(tab.data, findText, replaceText, {
         caseSensitive,
         isRegex,
-        exactCell
+        exactCell,
+        coords
       });
 
       if (result.count > 0) {
@@ -2077,10 +2147,13 @@ class CSVApp {
         });
         this.grid.render();
         this.saveNow();
-        this.showToast(`Zastąpiono <b>${result.count}</b> wystąpień`, 'success');
+        const scopeDesc = isSelectionScope ? 'w zaznaczeniu' : 'w całym arkuszu';
+        this.showToast(`Zastąpiono <b>${result.count}</b> wystąpień (${scopeDesc})`, 'success');
         replaceModal.classList.remove('active');
+        this.grid.wrapper?.focus({ preventScroll: true });
       } else {
-        this.showToast('Nie znaleziono pasujących komórek', 'info');
+        const scopeDesc = isSelectionScope ? 'w zaznaczonych komórkach' : 'w arkuszu';
+        this.showToast(`Nie znaleziono pasujących komórek (${scopeDesc})`, 'info');
       }
     });
 

@@ -120,6 +120,63 @@
     return row >= minRow && row <= maxRow && minCol === 0 && maxCol === this.getColCount() - 1;
   },
 
+  getSelectedCoordinates() {
+    const { minRow, maxRow, minCol, maxCol } = this.getNormalizedSelection();
+    const coords = [];
+    for (let r = minRow; r <= maxRow; r++) {
+      const actualR = this.rowIndices[r];
+      if (actualR === undefined || !this.data[actualR]) continue;
+      for (let c = minCol; c <= maxCol; c++) {
+        if (!this.hiddenCols.has(c)) {
+          coords.push({ row: actualR, col: c });
+        }
+      }
+    }
+    return coords;
+  },
+
+  getSelectionSummary() {
+    const { minRow, maxRow, minCol, maxCol } = this.getNormalizedSelection();
+    const rowCount = Math.max(0, maxRow - minRow + 1);
+    let colCount = 0;
+    for (let c = minCol; c <= maxCol; c++) {
+      if (!this.hiddenCols.has(c)) colCount++;
+    }
+    const cellCount = rowCount * colCount;
+
+    const startColLetter = CSVParser.columnIndexToLetter(minCol);
+    const endColLetter = CSVParser.columnIndexToLetter(maxCol);
+    const startRowDisplay = (this.rowIndices[minRow] !== undefined ? this.rowIndices[minRow] : minRow) + 1;
+    const endRowDisplay = (this.rowIndices[maxRow] !== undefined ? this.rowIndices[maxRow] : maxRow) + 1;
+
+    let rangeText = '';
+    if (this.selectionType === 'all') {
+      rangeText = 'Wszystkie komórki';
+    } else if (this.selectionType === 'row') {
+      rangeText = rowCount === 1 ? `Wiersz ${startRowDisplay}` : `Wiersze ${startRowDisplay}–${endRowDisplay}`;
+    } else if (this.selectionType === 'col') {
+      rangeText = colCount === 1 ? `Kolumna ${startColLetter}` : `Kolumny ${startColLetter}–${endColLetter}`;
+    } else if (rowCount === 1 && colCount === 1) {
+      rangeText = `Komórka ${startColLetter}${startRowDisplay}`;
+    } else {
+      rangeText = `${startColLetter}${startRowDisplay}:${endColLetter}${endRowDisplay}`;
+    }
+
+    let cellCountLabel = `${cellCount} komórek`;
+    if (cellCount === 1) {
+      cellCountLabel = '1 komórka';
+    } else if (cellCount % 10 >= 2 && cellCount % 10 <= 4 && (cellCount % 100 < 10 || cellCount % 100 >= 20)) {
+      cellCountLabel = `${cellCount} komórki`;
+    }
+
+    return {
+      rangeText,
+      cellCount,
+      cellCountLabel,
+      fullLabel: `${rangeText} (${cellCountLabel})`
+    };
+  },
+
   notifySelection() {
     if (this.onSelectionChange) {
       const norm = this.getNormalizedSelection();
