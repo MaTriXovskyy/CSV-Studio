@@ -663,37 +663,43 @@ const CSVOperations = {
     const trimmed = String(input).trim();
     if (!trimmed) return [];
 
-    // Sprawdzenie zapisu zakresowego np. C01-C10, C1-C5, 1-10
-    const rangeMatch = trimmed.match(/^([A-Za-z]*)(\d+)\s*-\s*([A-Za-z]*)(\d+)$/);
-    if (rangeMatch && rangeMatch[1].toUpperCase() === rangeMatch[3].toUpperCase()) {
-      const prefix = rangeMatch[1];
-      const startNum = parseInt(rangeMatch[2], 10);
-      const endNum = parseInt(rangeMatch[4], 10);
-      const padLen = rangeMatch[2].length;
-      const colors = [];
-      const min = Math.min(startNum, endNum);
-      const max = Math.max(startNum, endNum);
-      for (let i = min; i <= max; i++) {
-        colors.push(prefix + String(i).padStart(padLen, '0'));
-      }
-      return colors;
-    }
-
-    // Podział po przecinkach, średnikach, nowych liniach
-    return trimmed
+    const rawTokens = trimmed
       .split(/[\r\n,;\t]+/)
       .map(s => s.trim())
       .filter(s => s.length > 0);
+
+    const result = [];
+    for (const token of rawTokens) {
+      const rangeMatch = token.match(/^([A-Za-z]*)(\d+)\s*-\s*([A-Za-z]*)(\d+)$/);
+      if (rangeMatch && rangeMatch[1].toUpperCase() === rangeMatch[3].toUpperCase()) {
+        const prefix = rangeMatch[1];
+        const startNum = parseInt(rangeMatch[2], 10);
+        const endNum = parseInt(rangeMatch[4], 10);
+        const padLen = rangeMatch[2].length;
+        const min = Math.min(startNum, endNum);
+        const max = Math.max(startNum, endNum);
+        for (let i = min; i <= max; i++) {
+          result.push(prefix + String(i).padStart(padLen, '0'));
+        }
+      } else {
+        result.push(token);
+      }
+    }
+    return result;
   },
 
   /**
-   * Masowy generator produktów i wariantów ze zdjęciami (Tytuł + Symbol + Lista Kolorów)
+   * Masowy generator produktów i wariantów ze zdjęciami (Tytuł + Symbol + Zmienne ścieżki + Lista Kolorów)
    */
   generateBulkProducts(options = {}) {
     const {
       baseTitle = '',
       baseSku = '',
       colorsInput = '',
+      group = '',
+      productSymbol = '',
+      channel = '',
+      fabric = '',
       urlTemplate = '',
       startIndex = 1,
       endIndex = 9,
@@ -736,6 +742,12 @@ const CSVOperations = {
       } else {
         title = color;
       }
+      if (title.includes('{TKANINA}') || title.includes('{FABRIC}')) {
+        title = title.replace(/\{TKANINA\}|\{FABRIC\}/gi, fabric || '');
+      }
+      if (title.includes('{KANAL}') || title.includes('{MARKA}')) {
+        title = title.replace(/\{KANAL\}|\{MARKA\}/gi, channel || '');
+      }
 
       // Format SKU
       let sku = baseSku.trim();
@@ -745,6 +757,9 @@ const CSVOperations = {
         sku = (sku.endsWith('-') || sku.endsWith('_')) ? sku + color : `${sku}-${color}`;
       } else {
         sku = color;
+      }
+      if (sku.includes('{TKANINA}') || sku.includes('{FABRIC}')) {
+        sku = sku.replace(/\{TKANINA\}|\{FABRIC\}/gi, fabric || '');
       }
 
       const row = [title, sku];
@@ -757,6 +772,10 @@ const CSVOperations = {
           const nStr = String(photoNum);
           const n0Str = String(photoNum).padStart(2, '0');
           let url = urlTemplate
+            .replace(/\{GRUPA\}|\{GROUP\}|\{FOLDER\}|\{KATEGORIA\}/gi, group || '')
+            .replace(/\{SYMBOL_PRODUKTU\}|\{SYMBOL\}|\{MODEL\}|\{PRODUKT\}/gi, productSymbol || '')
+            .replace(/\{KANAL\}|\{CHANNEL\}|\{MARKA\}|\{BRAND\}/gi, channel || '')
+            .replace(/\{TKANINA\}|\{FABRIC\}|\{MATERIAL\}/gi, fabric || '')
             .replace(/\{SKU\}|\{VAL\}/gi, sku)
             .replace(/\{KOLOR\}|\{COLOR\}/gi, color)
             .replace(/\{N0\}/g, n0Str)

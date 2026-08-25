@@ -2088,6 +2088,10 @@ class CSVApp {
 
     const bulkBaseTitle = document.getElementById('bulkBaseTitle');
     const bulkBaseSku = document.getElementById('bulkBaseSku');
+    const bulkGroup = document.getElementById('bulkGroup');
+    const bulkProductCode = document.getElementById('bulkProductCode');
+    const bulkChannel = document.getElementById('bulkChannel');
+    const bulkFabric = document.getElementById('bulkFabric');
     const bulkColorsInput = document.getElementById('bulkColorsInput');
     const templateInput = document.getElementById('imgUrlTemplate');
     const startIdxInput = document.getElementById('imgUrlStartIdx');
@@ -2100,6 +2104,18 @@ class CSVApp {
     const savedSku = localStorage.getItem('csv_studio_bulk_sku');
     if (savedSku && bulkBaseSku) bulkBaseSku.value = savedSku;
 
+    const savedGroup = localStorage.getItem('csv_studio_bulk_group');
+    if (savedGroup && bulkGroup) bulkGroup.value = savedGroup;
+
+    const savedProductCode = localStorage.getItem('csv_studio_bulk_product_code');
+    if (savedProductCode && bulkProductCode) bulkProductCode.value = savedProductCode;
+
+    const savedChannel = localStorage.getItem('csv_studio_bulk_channel');
+    if (savedChannel && bulkChannel) bulkChannel.value = savedChannel;
+
+    const savedFabric = localStorage.getItem('csv_studio_bulk_fabric');
+    if (savedFabric && bulkFabric) bulkFabric.value = savedFabric;
+
     const savedColors = localStorage.getItem('csv_studio_bulk_colors');
     if (savedColors && bulkColorsInput) bulkColorsInput.value = savedColors;
 
@@ -2107,7 +2123,7 @@ class CSVApp {
     if (savedTemplate && templateInput) {
       templateInput.value = savedTemplate;
     } else if (templateInput && !templateInput.value) {
-      templateInput.value = 'https://search.doboxa.biz/upload/adph/PET/PET-ST02/Murando/CORD/{SKU}/{SKU}-{N}.jpg';
+      templateInput.value = 'https://search.doboxa.biz/upload/adph/{GRUPA}/{SYMBOL}/{KANAL}/{TKANINA}/{SKU}/{SKU}-{N}.jpg';
     }
 
     const savedStart = localStorage.getItem('csv_studio_img_url_start');
@@ -2132,6 +2148,10 @@ class CSVApp {
 
     const baseTitle = document.getElementById('bulkBaseTitle')?.value || '';
     const baseSku = document.getElementById('bulkBaseSku')?.value || '';
+    const group = document.getElementById('bulkGroup')?.value || '';
+    const productSymbol = document.getElementById('bulkProductCode')?.value || '';
+    const channel = document.getElementById('bulkChannel')?.value || '';
+    const fabric = document.getElementById('bulkFabric')?.value || '';
     const colorsInput = document.getElementById('bulkColorsInput')?.value || '';
     const templateInput = document.getElementById('imgUrlTemplate');
     const startIdxInput = document.getElementById('imgUrlStartIdx');
@@ -2180,6 +2200,12 @@ class CSVApp {
       } else {
         title = color;
       }
+      if (title.includes('{TKANINA}') || title.includes('{FABRIC}')) {
+        title = title.replace(/\{TKANINA\}|\{FABRIC\}/gi, fabric || '');
+      }
+      if (title.includes('{KANAL}') || title.includes('{MARKA}')) {
+        title = title.replace(/\{KANAL\}|\{MARKA\}/gi, channel || '');
+      }
 
       let sku = baseSku.trim();
       if (sku.includes('{KOLOR}') || sku.includes('{COLOR}') || sku.includes('{K}')) {
@@ -2188,6 +2214,9 @@ class CSVApp {
         sku = (sku.endsWith('-') || sku.endsWith('_')) ? sku + color : `${sku}-${color}`;
       } else {
         sku = color;
+      }
+      if (sku.includes('{TKANINA}') || sku.includes('{FABRIC}')) {
+        sku = sku.replace(/\{TKANINA\}|\{FABRIC\}/gi, fabric || '');
       }
 
       const escapedTitle = this.grid ? this.grid.escapeHTML(title) : title;
@@ -2214,6 +2243,10 @@ class CSVApp {
         const nStr = String(n);
         const n0Str = String(n).padStart(2, '0');
         let url = template
+          .replace(/\{GRUPA\}|\{GROUP\}|\{FOLDER\}|\{KATEGORIA\}/gi, group || '')
+          .replace(/\{SYMBOL_PRODUKTU\}|\{SYMBOL\}|\{MODEL\}|\{PRODUKT\}/gi, productSymbol || '')
+          .replace(/\{KANAL\}|\{CHANNEL\}|\{MARKA\}|\{BRAND\}/gi, channel || '')
+          .replace(/\{TKANINA\}|\{FABRIC\}|\{MATERIAL\}/gi, fabric || '')
           .replace(/\{SKU\}|\{VAL\}/gi, sku)
           .replace(/\{KOLOR\}|\{COLOR\}/gi, color)
           .replace(/\{N0\}/g, n0Str)
@@ -2251,6 +2284,10 @@ class CSVApp {
 
     const baseTitle = document.getElementById('bulkBaseTitle')?.value || '';
     const baseSku = document.getElementById('bulkBaseSku')?.value || '';
+    const group = document.getElementById('bulkGroup')?.value || '';
+    const productSymbol = document.getElementById('bulkProductCode')?.value || '';
+    const channel = document.getElementById('bulkChannel')?.value || '';
+    const fabric = document.getElementById('bulkFabric')?.value || '';
     const colorsInput = document.getElementById('bulkColorsInput')?.value || '';
     const insertAction = document.querySelector('input[name="bulkInsertAction"]:checked')?.value || 'append';
     const templateInput = document.getElementById('imgUrlTemplate');
@@ -2283,11 +2320,19 @@ class CSVApp {
     localStorage.setItem('csv_studio_img_url_end', String(endIndex));
     localStorage.setItem('csv_studio_bulk_title', baseTitle);
     localStorage.setItem('csv_studio_bulk_sku', baseSku);
+    localStorage.setItem('csv_studio_bulk_group', group);
+    localStorage.setItem('csv_studio_bulk_product_code', productSymbol);
+    localStorage.setItem('csv_studio_bulk_channel', channel);
+    localStorage.setItem('csv_studio_bulk_fabric', fabric);
     localStorage.setItem('csv_studio_bulk_colors', colorsInput);
 
     const bulkRes = CSVOperations.generateBulkProducts({
       baseTitle,
       baseSku,
+      group,
+      productSymbol,
+      channel,
+      fabric,
       colorsInput,
       urlTemplate,
       startIndex,
@@ -2464,6 +2509,13 @@ class CSVApp {
     const updatePreviewHandler = () => this.updateImageUrlPreview();
     document.getElementById('bulkBaseTitle')?.addEventListener('input', updatePreviewHandler);
     document.getElementById('bulkBaseSku')?.addEventListener('input', updatePreviewHandler);
+    document.getElementById('bulkGroup')?.addEventListener('input', updatePreviewHandler);
+    document.getElementById('bulkGroup')?.addEventListener('change', updatePreviewHandler);
+    document.getElementById('bulkProductCode')?.addEventListener('input', updatePreviewHandler);
+    document.getElementById('bulkChannel')?.addEventListener('input', updatePreviewHandler);
+    document.getElementById('bulkChannel')?.addEventListener('change', updatePreviewHandler);
+    document.getElementById('bulkFabric')?.addEventListener('input', updatePreviewHandler);
+    document.getElementById('bulkFabric')?.addEventListener('change', updatePreviewHandler);
     document.getElementById('bulkColorsInput')?.addEventListener('input', updatePreviewHandler);
     document.getElementById('imgUrlTemplate')?.addEventListener('input', updatePreviewHandler);
     document.getElementById('imgUrlStartIdx')?.addEventListener('input', updatePreviewHandler);
