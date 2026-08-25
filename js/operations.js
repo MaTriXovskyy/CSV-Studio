@@ -653,6 +653,128 @@ const CSVOperations = {
       changes,
       rowsProcessed: rowsToProcess.length
     };
+  },
+
+  /**
+   * Inteligentny parser listy wariantów / kolorów (C01-C05, C01, C02, C03, wklejone z nowymi liniami itp.)
+   */
+  parseVariantColors(input) {
+    if (!input) return [];
+    const trimmed = String(input).trim();
+    if (!trimmed) return [];
+
+    // Sprawdzenie zapisu zakresowego np. C01-C10, C1-C5, 1-10
+    const rangeMatch = trimmed.match(/^([A-Za-z]*)(\d+)\s*-\s*([A-Za-z]*)(\d+)$/);
+    if (rangeMatch && rangeMatch[1].toUpperCase() === rangeMatch[3].toUpperCase()) {
+      const prefix = rangeMatch[1];
+      const startNum = parseInt(rangeMatch[2], 10);
+      const endNum = parseInt(rangeMatch[4], 10);
+      const padLen = rangeMatch[2].length;
+      const colors = [];
+      const min = Math.min(startNum, endNum);
+      const max = Math.max(startNum, endNum);
+      for (let i = min; i <= max; i++) {
+        colors.push(prefix + String(i).padStart(padLen, '0'));
+      }
+      return colors;
+    }
+
+    // Podział po przecinkach, średnikach, nowych liniach
+    return trimmed
+      .split(/[\r\n,;\t]+/)
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+  },
+
+  /**
+   * Masowy generator produktów i wariantów ze zdjęciami (Tytuł + Symbol + Lista Kolorów)
+   */
+  generateBulkProducts(options = {}) {
+    const {
+      baseTitle = '',
+      baseSku = '',
+      colorsInput = '',
+      urlTemplate = '',
+      startIndex = 1,
+      endIndex = 9,
+      namingMode = 'ecommerce',
+      customHeaderPattern = 'Zdjęcie {N}',
+      maxImageColumns = 15
+    } = options;
+
+    const colors = this.parseVariantColors(colorsInput);
+    if (colors.length === 0) return { rows: [], headers: [], count: 0 };
+
+    // 1. Zbuduj nagłówki kolumn
+    let headers = [];
+    const totalExtraImages = Math.max(endIndex - 1, maxImageColumns);
+    if (namingMode === 'ecommerce') {
+      headers = ['Tytuł', 'Symbole (rozdzielone przecinkiem)', 'Zdjęcie główne (URL)'];
+      for (let i = 1; i <= totalExtraImages; i++) {
+        headers.push(`Zdjęcie dodatkowe ${i} (URL)`);
+      }
+    } else {
+      headers = ['Tytuł', 'Symbole (rozdzielone przecinkiem)', customHeaderPattern.replace(/\{N0\}/g, '01').replace(/\{N\}/g, '1')];
+      for (let i = 2; i <= endIndex; i++) {
+        headers.push(
+          customHeaderPattern
+            .replace(/\{N0\}/g, String(i).padStart(2, '0'))
+            .replace(/\{N\}/g, String(i))
+        );
+      }
+    }
+
+    // 2. Generuj wiersze dla każdego koloru
+    const rows = [];
+    for (const color of colors) {
+      // Format Tytułu
+      let title = baseTitle.trim();
+      if (title.includes('{KOLOR}') || title.includes('{COLOR}')) {
+        title = title.replace(/\{KOLOR\}|\{COLOR\}/gi, color);
+      } else if (title) {
+        title = title.endsWith(' ') ? title + color : `${title} ${color}`;
+      } else {
+        title = color;
+      }
+
+      // Format SKU
+      let sku = baseSku.trim();
+      if (sku.includes('{KOLOR}') || sku.includes('{COLOR}') || sku.includes('{K}')) {
+        sku = sku.replace(/\{KOLOR\}|\{COLOR\}|\{K\}/gi, color);
+      } else if (sku) {
+        sku = (sku.endsWith('-') || sku.endsWith('_')) ? sku + color : `${sku}-${color}`;
+      } else {
+        sku = color;
+      }
+
+      const row = [title, sku];
+
+      // Format linków do zdjęć
+      const numPhotoCols = headers.length - 2;
+      for (let colIdx = 0; colIdx < numPhotoCols; colIdx++) {
+        const photoNum = colIdx + 1;
+        if (photoNum >= startIndex && photoNum <= endIndex && urlTemplate) {
+          const nStr = String(photoNum);
+          const n0Str = String(photoNum).padStart(2, '0');
+          let url = urlTemplate
+            .replace(/\{SKU\}|\{VAL\}/gi, sku)
+            .replace(/\{KOLOR\}|\{COLOR\}/gi, color)
+            .replace(/\{N0\}/g, n0Str)
+            .replace(/\{N\}/g, nStr);
+          row.push(url);
+        } else {
+          row.push('');
+        }
+      }
+
+      rows.push(row);
+    }
+
+    return {
+      headers,
+      rows,
+      count: rows.length
+    };
   }
 };
 

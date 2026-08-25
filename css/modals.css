@@ -350,4 +350,45 @@
   color: var(--text-primary);
 }
 
+/* Modal Navigation Tabs */
+.modal-tabs {
+  display: flex;
+  gap: 6px;
+  background-color: var(--bg-tertiary);
+  padding: 4px;
+  border-radius: 8px;
+  margin-bottom: 14px;
+  border: 1px solid var(--border-color);
+}
+
+.modal-tab-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.modal-tab-btn.active {
+  background-color: var(--bg-secondary);
+  color: var(--accent-primary);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+}
+
+.modal-tab-btn:hover:not(.active) {
+  color: var(--text-primary);
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+
 
