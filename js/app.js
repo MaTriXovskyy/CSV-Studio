@@ -851,57 +851,62 @@ class CSVApp {
       this.grid.commitEdit();
     }
 
-    const csvContent = CSVParser.unparse(tab.data, {
-      delimiter: tab.delimiter
-    });
+    try {
+      const csvContent = CSVParser.serialize(tab.data, {
+        delimiter: tab.delimiter
+      });
 
-    // 1. Electron Direct Save
-    if (window.electronAPI && window.electronAPI.isElectron) {
-      if (tab.filePath) {
-        const res = await window.electronAPI.saveFileDirect(tab.filePath, csvContent, tab.encoding);
+      // 1. Electron Direct Save
+      if (window.electronAPI && window.electronAPI.isElectron) {
+        if (tab.filePath) {
+          const res = await window.electronAPI.saveFileDirect(tab.filePath, csvContent, tab.encoding);
+          if (res && res.success) {
+            this.markTabSaved(tab);
+            this.saveNow();
+            this.showToast(`Zapisano zmiany w pliku: <b>${tab.filename}</b>`, 'success');
+            return;
+          }
+        }
+
+        const res = await window.electronAPI.saveFileDialog(tab.filename, csvContent, tab.encoding);
         if (res && res.success) {
+          tab.filePath = res.filePath;
+          tab.filename = res.filename;
           this.markTabSaved(tab);
           this.saveNow();
-          this.showToast(`Zapisano zmiany w pliku: <b>${tab.filename}</b>`, 'success');
+          this.showToast(`Zapisano plik jako: <b>${tab.filename}</b>`, 'success');
+        }
+        return;
+      }
+
+      // 2. PWA / Browser File System Access API (Bezpośredni zapis na dysku bez pobierania)
+      if (tab.fileHandle && 'createWritable' in tab.fileHandle) {
+        try {
+          const writable = await tab.fileHandle.createWritable();
+          const bom = '\uFEFF';
+          await writable.write(bom + csvContent);
+          await writable.close();
+
+          this.markTabSaved(tab);
+          this.saveNow();
+          this.showToast(`Zapisano bezpośrednio na dysku: <b>${tab.filename}</b>`, 'success');
           return;
+        } catch (err) {
+          console.warn('Błąd bezpośredniego zapisu przez File System Access:', err);
         }
       }
 
-      const res = await window.electronAPI.saveFileDialog(tab.filename, csvContent, tab.encoding);
-      if (res && res.success) {
-        tab.filePath = res.filePath;
-        tab.filename = res.filename;
-        this.markTabSaved(tab);
-        this.saveNow();
-        this.showToast(`Zapisano plik jako: <b>${tab.filename}</b>`, 'success');
-      }
-      return;
+      // 3. Fallback: Standardowe pobranie pliku CSV z BOM
+      CSVExporter.exportToCSV(tab.data, tab.filename, {
+        delimiter: tab.delimiter,
+        bom: true
+      });
+      this.markTabSaved(tab);
+      this.showToast(`Pobrano plik <b>${tab.filename}</b> (z BOM dla Excela)`, 'success');
+    } catch (err) {
+      console.error('Błąd podczas zapisu pliku CSV:', err);
+      this.showToast('Wystąpił błąd podczas zapisu pliku CSV: ' + err.message, 'danger');
     }
-
-    // 2. PWA / Browser File System Access API (Bezpośredni zapis na dysku bez pobierania)
-    if (tab.fileHandle && 'createWritable' in tab.fileHandle) {
-      try {
-        const writable = await tab.fileHandle.createWritable();
-        const bom = '\uFEFF';
-        await writable.write(bom + csvContent);
-        await writable.close();
-
-        this.markTabSaved(tab);
-        this.saveNow();
-        this.showToast(`Zapisano bezpośrednio na dysku: <b>${tab.filename}</b>`, 'success');
-        return;
-      } catch (err) {
-        console.warn('Błąd bezpośredniego zapisu przez File System Access:', err);
-      }
-    }
-
-    // 3. Fallback: Standardowe pobranie pliku CSV z BOM
-    CSVExporter.exportToCSV(tab.data, tab.filename, {
-      delimiter: tab.delimiter,
-      bom: true
-    });
-    this.markTabSaved(tab);
-    this.showToast(`Pobrano plik <b>${tab.filename}</b> (z BOM dla Excela)`, 'success');
   }
 
   handleContextMenuAction(action, target) {

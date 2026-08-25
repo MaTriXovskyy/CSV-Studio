@@ -321,6 +321,13 @@ const CSVParser = {
   },
 
   /**
+   * Alias dla serialize (zgodność z PapaParse unparse)
+   */
+  unparse(data, options = {}) {
+    return this.serialize(data, options);
+  },
+
+  /**
    * Generuje litery kolumn jak w Excelu (0 -> A, 1 -> B, ..., 26 -> AA)
    */
   columnIndexToLetter(index) {
