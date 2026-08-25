@@ -187,12 +187,17 @@ body, html {
 .brand-tag {
   font-size: 10px;
   font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 1px 7px;
+  border-radius: 9999px;
   background-color: var(--accent-light);
-  color: var(--accent-text);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  color: var(--accent-primary);
+  border: 1px solid rgba(16, 124, 65, 0.25);
+  font-family: var(--font-mono);
+  letter-spacing: 0.3px;
+  display: inline-flex;
+  align-items: center;
+  user-select: none;
+  line-height: 1.4;
 }
 
 /* Top Menubar */
