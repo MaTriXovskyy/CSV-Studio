@@ -478,6 +478,181 @@ const CSVOperations = {
     }
 
     return changes;
+  },
+
+  /**
+   * Generator linków URL do zdjęć na podstawie SKU i szablonu
+   */
+  generateImageUrls(data, headers, options = {}) {
+    if (!data || data.length === 0) return { data, headers, generatedCount: 0, changes: [], rowsProcessed: 0 };
+
+    const {
+      sourceColIndex = 0,
+      urlTemplate = '',
+      startIndex = 1,
+      endIndex = 9,
+      namingMode = 'ecommerce', // 'ecommerce' | 'custom'
+      customHeaderPattern = 'Zdjęcie {N}',
+      clearExtraImageCols = true,
+      rowIndices = null,
+      hasHeader = true
+    } = options;
+
+    if (!urlTemplate) return { data, headers, generatedCount: 0, changes: [], rowsProcessed: 0 };
+
+    const startRow = hasHeader ? 1 : 0;
+    const workingData = data;
+    let workingHeaders = headers ? [...headers] : (hasHeader && workingData.length > 0 ? [...workingData[0]] : null);
+
+    // 1. Wyznaczenie listy specyfikacji zdjęć: { n, headerName }
+    const imageSpecs = [];
+    for (let n = startIndex; n <= endIndex; n++) {
+      let headerName = '';
+      if (namingMode === 'ecommerce') {
+        headerName = (n === 1) ? 'Zdjęcie główne (URL)' : `Zdjęcie dodatkowe ${n - 1} (URL)`;
+      } else {
+        headerName = customHeaderPattern
+          .replace(/\{N0\}/g, String(n).padStart(2, '0'))
+          .replace(/\{N\}/g, String(n));
+      }
+      imageSpecs.push({ n, headerName });
+    }
+
+    // Funkcja normalizująca nazwy nagłówków do porównań
+    const normalizeH = (h) => String(h || '').toLowerCase().replace(/\s*\(url\)\s*/i, '').replace(/[\s_\-]+/g, '');
+
+    // 2. Dopasowanie lub tworzenie kolumn
+    const specColIndices = [];
+
+    if (workingHeaders) {
+      for (const spec of imageSpecs) {
+        const normSpec = normalizeH(spec.headerName);
+        let foundCol = workingHeaders.findIndex(h => normalizeH(h) === normSpec);
+
+        if (foundCol === -1 && namingMode === 'ecommerce') {
+          if (spec.n === 1) {
+            foundCol = workingHeaders.findIndex(h => {
+              const nh = normalizeH(h);
+              return nh === 'zdjęciegłówne' || nh === 'zdjecieglowne' || nh === 'mainimage' || nh === 'image' || nh === 'zdjęcie1' || nh === 'zdjecie1';
+            });
+          } else {
+            const extraIdx = spec.n - 1;
+            foundCol = workingHeaders.findIndex(h => {
+              const nh = normalizeH(h);
+              return nh === `zdjęciedodatkowe${extraIdx}` || nh === `zdjeciedodatkowe${extraIdx}` || nh === `extraimage${extraIdx}` || nh === `zdjęcie${spec.n}` || nh === `zdjecie${spec.n}`;
+            });
+          }
+        }
+
+        if (foundCol !== -1) {
+          specColIndices.push(foundCol);
+        } else {
+          const newColIdx = workingHeaders.length;
+          workingHeaders.push(spec.headerName);
+          for (let r = 0; r < workingData.length; r++) {
+            while (workingData[r].length < workingHeaders.length) {
+              workingData[r].push(r === 0 && hasHeader ? spec.headerName : '');
+            }
+          }
+          specColIndices.push(newColIdx);
+        }
+      }
+    } else {
+      let maxCols = workingData[0] ? workingData[0].length : 0;
+      for (let i = 0; i < imageSpecs.length; i++) {
+        specColIndices.push(maxCols + i);
+      }
+      for (let r = 0; r < workingData.length; r++) {
+        while (workingData[r].length < maxCols + imageSpecs.length) {
+          workingData[r].push('');
+        }
+      }
+    }
+
+    // 3. Wykrycie nadmiarowych kolumn ze zdjęciami do wyczyszczenia (jeśli opcja aktywna)
+    const extraColsToClear = [];
+    if (clearExtraImageCols && workingHeaders) {
+      for (let c = 0; c < workingHeaders.length; c++) {
+        if (specColIndices.includes(c)) continue;
+        const norm = normalizeH(workingHeaders[c]);
+        const matchExtra = norm.match(/zdj[eę]ciedodatkowe(\d+)/i);
+        if (matchExtra) {
+          const num = parseInt(matchExtra[1], 10);
+          if (num >= endIndex) {
+            extraColsToClear.push(c);
+          }
+        }
+      }
+    }
+
+    // 4. Generowanie linków dla wierszy
+    const rowsToProcess = rowIndices && Array.isArray(rowIndices)
+      ? rowIndices.filter(r => r >= startRow && r < workingData.length)
+      : Array.from({ length: Math.max(0, workingData.length - startRow) }, (_, i) => i + startRow);
+
+    let generatedCount = 0;
+    const changes = [];
+
+    for (const r of rowsToProcess) {
+      const row = workingData[r];
+      if (!row) continue;
+
+      const rawSku = (row[sourceColIndex] !== undefined && row[sourceColIndex] !== null)
+        ? String(row[sourceColIndex]).trim()
+        : '';
+
+      if (!rawSku) continue;
+
+      for (let i = 0; i < imageSpecs.length; i++) {
+        const spec = imageSpecs[i];
+        const targetCol = specColIndices[i];
+        const nStr = String(spec.n);
+        const n0Str = String(spec.n).padStart(2, '0');
+
+        let url = urlTemplate
+          .replace(/\{SKU\}|\{VAL\}/gi, rawSku)
+          .replace(/\{N0\}/g, n0Str)
+          .replace(/\{N\}/g, nStr);
+
+        if (typeof CSVParser !== 'undefined' && CSVParser.letterToColumnIndex) {
+          url = url.replace(/\{COL:([A-Za-z]+)\}/gi, (_, letter) => {
+            const cIdx = CSVParser.letterToColumnIndex(letter.toUpperCase());
+            return (row[cIdx] !== undefined && row[cIdx] !== null) ? String(row[cIdx]).trim() : '';
+          });
+        }
+        url = url.replace(/\{COL:(\d+)\}/g, (_, idxStr) => {
+          const cIdx = parseInt(idxStr, 10);
+          return (row[cIdx] !== undefined && row[cIdx] !== null) ? String(row[cIdx]).trim() : '';
+        });
+
+        const oldVal = row[targetCol] || '';
+        if (oldVal !== url) {
+          row[targetCol] = url;
+          changes.push({ row: r, col: targetCol, oldValue: oldVal, newValue: url });
+          generatedCount++;
+        }
+      }
+
+      for (const extraCol of extraColsToClear) {
+        const oldVal = row[extraCol] || '';
+        if (oldVal !== '') {
+          row[extraCol] = '';
+          changes.push({ row: r, col: extraCol, oldValue: oldVal, newValue: '' });
+        }
+      }
+    }
+
+    if (hasHeader && workingHeaders && workingData.length > 0) {
+      workingData[0] = [...workingHeaders];
+    }
+
+    return {
+      data: workingData,
+      headers: workingHeaders,
+      generatedCount,
+      changes,
+      rowsProcessed: rowsToProcess.length
+    };
   }
 };
 

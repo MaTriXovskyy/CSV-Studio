@@ -1,4 +1,4 @@
-const CACHE_NAME = 'csv-studio-v21';
+const CACHE_NAME = 'csv-studio-v22';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

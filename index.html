@@ -158,6 +158,13 @@
                 </div>
               </div>
               <div class="dropdown-divider"></div>
+              <div class="dropdown-action" id="menuImageUrlBuilderBtn">
+                <div class="dropdown-action-left">
+                  <i data-lucide="images"></i>
+                  <span>Generator linków do zdjęć (URL Builder)...</span>
+                </div>
+              </div>
+              <div class="dropdown-divider"></div>
               <div class="dropdown-action" id="cleanTrimBtn">
                 <div class="dropdown-action-left">
                   <i data-lucide="scissors"></i>
@@ -303,6 +310,10 @@
         <button class="tool-btn" id="fillDownBtn" title="Wypełnij w dół z komórki powyżej (Ctrl+D)">
           <i data-lucide="arrow-down-to-dot"></i>
           <span>Wypełnij w dół</span>
+        </button>
+        <button class="tool-btn" id="imageUrlBuilderBtn" title="Automatyczny generator linków do zdjęć na podstawie SKU">
+          <i data-lucide="images"></i>
+          <span>Zdjęcia URL</span>
         </button>
       </div>
 
@@ -525,6 +536,99 @@
           <button class="btn btn-primary" id="doReplaceAllBtn">
             <i data-lucide="check"></i>
             <span id="doReplaceBtnText">Zamień wszystko</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Okno modalne: Generator URL Zdjęć (Image URL Builder) -->
+    <div class="modal-overlay" id="imageUrlBuilderModal">
+      <div class="modal-box" style="max-width: 580px;">
+        <div class="modal-header">
+          <div class="modal-title" style="display:flex; align-items:center; gap:6px;">
+            <i data-lucide="images"></i>
+            <span>Generator linków do zdjęć (Image URL Builder)</span>
+          </div>
+          <button class="modal-close-btn" id="closeImageUrlModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group" style="flex: 2;">
+              <label class="form-label">Kolumna źródłowa (SKU / Symbol):</label>
+              <select class="form-select" id="imgUrlSourceCol"></select>
+            </div>
+            <div class="form-group" style="flex: 1.2;">
+              <label class="form-label">Zakres zdjęć:</label>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <input type="number" class="form-input" id="imgUrlStartIdx" min="1" max="99" value="1" style="width:60px; text-align:center;" title="Numer pierwszego zdjęcia">
+                <span style="font-size:12px; color:var(--text-muted);">do</span>
+                <input type="number" class="form-input" id="imgUrlEndIdx" min="1" max="99" value="9" style="width:60px; text-align:center;" title="Numer ostatniego zdjęcia">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Szablon adresu URL zdjęcia:</label>
+            <input type="text" class="form-input" id="imgUrlTemplate" placeholder="np. https://serwer.pl/zdjecia/{SKU}/{SKU}-{N}.jpg" value="https://search.doboxa.biz/upload/adph/PET/PET-ST02/Murando/CORD/{SKU}/{SKU}-{N}.jpg">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px;">
+              <div class="tag-chip-group">
+                <span style="font-size:11px; color:var(--text-muted);">Wstaw:</span>
+                <button type="button" class="tag-chip" data-insert="{SKU}">+ {SKU}</button>
+                <button type="button" class="tag-chip" data-insert="{N}">+ {N} (1,2..)</button>
+                <button type="button" class="tag-chip" data-insert="{N0}">+ {N0} (01,02..)</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Nazewnictwo kolumn ze zdjęciami:</label>
+            <div class="scope-selector-group">
+              <label class="scope-option">
+                <input type="radio" name="imgUrlNaming" value="ecommerce" id="imgUrlNamingEcom" checked>
+                <span>Standard E-Commerce (<code>Zdjęcie główne (URL)</code>, <code>Zdjęcie dodatkowe 1 (URL)</code>...)</span>
+              </label>
+              <label class="scope-option" style="flex-wrap: wrap;">
+                <input type="radio" name="imgUrlNaming" value="custom" id="imgUrlNamingCustom">
+                <span>Własny szablon nagłówka:</span>
+                <input type="text" class="form-input" id="imgUrlCustomHeaderPattern" value="Zdjęcie {N}" style="height:26px; padding:0 8px; font-size:12px; width:130px;" placeholder="np. Zdjęcie {N}">
+              </label>
+            </div>
+          </div>
+
+          <div class="form-row" style="align-items: center;">
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label">Zakres wierszy:</label>
+              <div style="display:flex; gap:14px; margin-top:4px;">
+                <label class="form-checkbox-label">
+                  <input type="radio" name="imgUrlScope" value="all" id="imgUrlScopeAll" checked>
+                  <span>Wszystkie wiersze</span>
+                </label>
+                <label class="form-checkbox-label">
+                  <input type="radio" name="imgUrlScope" value="selection" id="imgUrlScopeSelection">
+                  <span>Tylko zaznaczone</span>
+                </label>
+              </div>
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label class="form-checkbox-label" style="margin-top:16px;">
+                <input type="checkbox" class="form-checkbox" id="imgUrlClearExtra" checked>
+                <span>Wyczyść puste nadmiarowe kolumny</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Podgląd na żywo (dla pierwszego produktu):</label>
+            <div class="url-preview-container" id="imgUrlPreviewContainer">
+              <div style="color:var(--text-muted); font-size:11px;">Wpisz szablon URL, aby zobaczyć podgląd...</div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="cancelImageUrlBtn">Anuluj</button>
+          <button class="btn btn-primary" id="doGenerateImgUrlsBtn">
+            <i data-lucide="sparkles"></i>
+            <span>Generuj linki do zdjęć</span>
           </button>
         </div>
       </div>

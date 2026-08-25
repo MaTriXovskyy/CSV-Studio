@@ -1185,6 +1185,10 @@ class CSVApp {
       case 'replaceInSelection':
         this.openReplaceModal('selection');
         break;
+
+      case 'openImageUrlBuilder':
+        this.openImageUrlBuilderModal(target?.targetData?.col);
+        break;
     }
   }
 
@@ -2075,6 +2079,270 @@ class CSVApp {
     }
   }
 
+  openImageUrlBuilderModal(targetColIndex = null) {
+    const tab = this.getActiveTab();
+    if (!tab) return;
+
+    const modal = document.getElementById('imageUrlBuilderModal');
+    if (!modal) return;
+
+    const colSelect = document.getElementById('imgUrlSourceCol');
+    const templateInput = document.getElementById('imgUrlTemplate');
+    const startIdxInput = document.getElementById('imgUrlStartIdx');
+    const endIdxInput = document.getElementById('imgUrlEndIdx');
+    const scopeAll = document.getElementById('imgUrlScopeAll');
+    const scopeSelection = document.getElementById('imgUrlScopeSelection');
+
+    // Wypełnij listę dostępnych kolumn
+    if (colSelect) {
+      colSelect.innerHTML = '';
+      const colCount = this.grid ? this.grid.getColCount() : (tab.headers ? tab.headers.length : 0);
+      let defaultSelected = targetColIndex !== null ? targetColIndex : 0;
+      let foundSkuCol = false;
+
+      for (let c = 0; c < colCount; c++) {
+        const letter = CSVParser.columnIndexToLetter(c);
+        const headerName = (tab.headers && tab.headers[c]) ? tab.headers[c] : letter;
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = `${letter}: ${headerName}`;
+        colSelect.appendChild(opt);
+
+        if (targetColIndex === null && !foundSkuCol) {
+          const normH = headerName.toLowerCase();
+          if (normH.includes('symbol') || normH.includes('sku') || normH.includes('kod') || normH.includes('id') || normH.includes('model')) {
+            defaultSelected = c;
+            foundSkuCol = true;
+          }
+        }
+      }
+
+      if (targetColIndex !== null) {
+        colSelect.value = targetColIndex;
+      } else if (foundSkuCol) {
+        colSelect.value = defaultSelected;
+      } else if (this.grid && this.grid.activeCell && this.grid.activeCell.col !== undefined) {
+        colSelect.value = this.grid.activeCell.col;
+      }
+    }
+
+    // Wczytaj zapamiętany szablon lub ustaw domyślny z pliku
+    const savedTemplate = localStorage.getItem('csv_studio_img_url_tpl');
+    if (savedTemplate && templateInput) {
+      templateInput.value = savedTemplate;
+    } else if (templateInput && !templateInput.value) {
+      templateInput.value = 'https://search.doboxa.biz/upload/adph/PET/PET-ST02/Murando/CORD/{SKU}/{SKU}-{N}.jpg';
+    }
+
+    const savedStart = localStorage.getItem('csv_studio_img_url_start');
+    if (savedStart && startIdxInput) startIdxInput.value = savedStart;
+
+    const savedEnd = localStorage.getItem('csv_studio_img_url_end');
+    if (savedEnd && endIdxInput) endIdxInput.value = savedEnd;
+
+    // Zakres wierszy: jeśli zaznaczono więcej niż 1 wiersz, domyślnie wybierz 'selection'
+    if (this.grid && scopeSelection && scopeAll) {
+      const norm = this.grid.getNormalizedSelection();
+      const hasMultiRow = (norm.maxRow > norm.minRow) || this.grid.selectionType === 'row';
+      if (hasMultiRow) {
+        scopeSelection.checked = true;
+      } else {
+        scopeAll.checked = true;
+      }
+    }
+
+    modal.classList.add('active');
+    this.refreshIcons();
+    this.updateImageUrlPreview();
+
+    setTimeout(() => {
+      templateInput?.focus();
+      templateInput?.select();
+    }, 50);
+  }
+
+  updateImageUrlPreview() {
+    const tab = this.getActiveTab();
+    const previewBox = document.getElementById('imgUrlPreviewContainer');
+    if (!previewBox) return;
+
+    if (!tab || !tab.data || tab.data.length === 0) {
+      previewBox.innerHTML = '<div style="color:var(--text-muted); font-size:11px;">Brak danych w arkuszu do podglądu</div>';
+      return;
+    }
+
+    const colSelect = document.getElementById('imgUrlSourceCol');
+    const templateInput = document.getElementById('imgUrlTemplate');
+    const startIdxInput = document.getElementById('imgUrlStartIdx');
+    const endIdxInput = document.getElementById('imgUrlEndIdx');
+    const namingCustom = document.getElementById('imgUrlNamingCustom');
+    const customPatternInput = document.getElementById('imgUrlCustomHeaderPattern');
+
+    const sourceCol = colSelect ? parseInt(colSelect.value, 10) : 0;
+    const template = templateInput?.value?.trim() || '';
+    const startIdx = Math.max(1, parseInt(startIdxInput?.value, 10) || 1);
+    const endIdx = Math.max(startIdx, parseInt(endIdxInput?.value, 10) || 9);
+    const isCustomNaming = namingCustom?.checked;
+    const customPattern = customPatternInput?.value || 'Zdjęcie {N}';
+
+    if (!template) {
+      previewBox.innerHTML = '<div style="color:var(--text-muted); font-size:11px;">Wpisz szablon adresu URL, aby zobaczyć podgląd linków...</div>';
+      return;
+    }
+
+    // Znajdź pierwszy wiersz z niepustym SKU
+    const startRow = tab.hasHeader ? 1 : 0;
+    let sampleRow = null;
+    for (let r = startRow; r < tab.data.length; r++) {
+      if (tab.data[r] && tab.data[r][sourceCol] && String(tab.data[r][sourceCol]).trim() !== '') {
+        sampleRow = tab.data[r];
+        break;
+      }
+    }
+
+    if (!sampleRow) {
+      sampleRow = tab.data[startRow] || ['P-ST02-30-30-45-C01'];
+    }
+
+    const sampleSku = String(sampleRow[sourceCol] || 'P-ST02-30-30-45-C01').trim();
+    const rowTitle = (sampleRow[0] && sourceCol !== 0) ? String(sampleRow[0]).trim() : '';
+
+    let previewHTML = `<div style="margin-bottom:6px; color:var(--text-secondary); font-size:11.5px; font-weight:600;">
+      Przykładowy produkt: <span style="color:var(--accent-primary); font-family:var(--font-mono);">${this.grid ? this.grid.escapeHTML(sampleSku) : sampleSku}</span>
+      ${rowTitle ? `<span style="color:var(--text-muted); font-weight:normal; margin-left:6px;">(${this.grid ? this.grid.escapeHTML(rowTitle) : rowTitle})</span>` : ''}
+    </div>`;
+
+    const limit = Math.min(endIdx, startIdx + 7);
+    for (let n = startIdx; n <= limit; n++) {
+      let headerName = '';
+      if (!isCustomNaming) {
+        headerName = (n === 1) ? 'Zdjęcie główne (URL)' : `Zdjęcie dodatkowe ${n - 1} (URL)`;
+      } else {
+        headerName = customPattern.replace(/\{N0\}/g, String(n).padStart(2, '0')).replace(/\{N\}/g, String(n));
+      }
+
+      const nStr = String(n);
+      const n0Str = String(n).padStart(2, '0');
+      let url = template
+        .replace(/\{SKU\}|\{VAL\}/gi, sampleSku)
+        .replace(/\{N0\}/g, n0Str)
+        .replace(/\{N\}/g, nStr);
+
+      if (typeof CSVParser !== 'undefined' && CSVParser.letterToColumnIndex) {
+        url = url.replace(/\{COL:([A-Za-z]+)\}/gi, (_, letter) => {
+          const cIdx = CSVParser.letterToColumnIndex(letter.toUpperCase());
+          return (sampleRow[cIdx] !== undefined && sampleRow[cIdx] !== null) ? String(sampleRow[cIdx]).trim() : '';
+        });
+      }
+      url = url.replace(/\{COL:(\d+)\}/g, (_, idxStr) => {
+        const cIdx = parseInt(idxStr, 10);
+        return (sampleRow[cIdx] !== undefined && sampleRow[cIdx] !== null) ? String(sampleRow[cIdx]).trim() : '';
+      });
+
+      const escapedH = this.grid ? this.grid.escapeHTML(headerName) : headerName;
+      const escapedUrl = this.grid ? this.grid.escapeHTML(url) : url;
+
+      previewHTML += `
+        <div class="url-preview-item">
+          <span class="url-preview-label">${escapedH}:</span>
+          <span class="url-preview-val">${escapedUrl}</span>
+        </div>
+      `;
+    }
+
+    if (endIdx > limit) {
+      previewHTML += `<div style="color:var(--text-muted); font-size:10px; margin-top:4px;">... oraz ${endIdx - limit} kolejnych zdjęć</div>`;
+    }
+
+    previewBox.innerHTML = previewHTML;
+  }
+
+  executeGenerateImageUrls() {
+    const tab = this.getActiveTab();
+    if (!tab) return;
+
+    const colSelect = document.getElementById('imgUrlSourceCol');
+    const templateInput = document.getElementById('imgUrlTemplate');
+    const startIdxInput = document.getElementById('imgUrlStartIdx');
+    const endIdxInput = document.getElementById('imgUrlEndIdx');
+    const namingCustom = document.getElementById('imgUrlNamingCustom');
+    const customPatternInput = document.getElementById('imgUrlCustomHeaderPattern');
+    const scopeSelection = document.getElementById('imgUrlScopeSelection');
+    const clearExtraCheckbox = document.getElementById('imgUrlClearExtra');
+
+    const sourceColIndex = colSelect ? parseInt(colSelect.value, 10) : 0;
+    const urlTemplate = templateInput?.value?.trim() || '';
+    const startIndex = Math.max(1, parseInt(startIdxInput?.value, 10) || 1);
+    const endIndex = Math.max(startIndex, parseInt(endIdxInput?.value, 10) || 9);
+    const namingMode = namingCustom?.checked ? 'custom' : 'ecommerce';
+    const customHeaderPattern = customPatternInput?.value?.trim() || 'Zdjęcie {N}';
+    const isSelectionScope = scopeSelection?.checked || false;
+    const clearExtraImageCols = clearExtraCheckbox ? clearExtraCheckbox.checked : true;
+
+    if (!urlTemplate) {
+      this.showToast('Wpisz szablon adresu URL zdjęcia', 'warning');
+      templateInput?.focus();
+      return;
+    }
+
+    // Zapisz szablon w localStorage
+    localStorage.setItem('csv_studio_img_url_tpl', urlTemplate);
+    localStorage.setItem('csv_studio_img_url_start', String(startIndex));
+    localStorage.setItem('csv_studio_img_url_end', String(endIndex));
+
+    let rowIndices = null;
+    if (isSelectionScope && this.grid) {
+      const norm = this.grid.getNormalizedSelection();
+      rowIndices = [];
+      for (let r = norm.minRow; r <= norm.maxRow; r++) {
+        const actualR = this.grid.rowIndices[r];
+        if (actualR !== undefined) rowIndices.push(actualR);
+      }
+    }
+
+    const oldData = JSON.parse(JSON.stringify(tab.data));
+    const oldHeaders = tab.headers ? [...tab.headers] : null;
+
+    const result = CSVOperations.generateImageUrls(tab.data, tab.headers, {
+      sourceColIndex,
+      urlTemplate,
+      startIndex,
+      endIndex,
+      namingMode,
+      customHeaderPattern,
+      clearExtraImageCols,
+      rowIndices,
+      hasHeader: tab.hasHeader
+    });
+
+    if (result.generatedCount > 0 || (result.headers && (!oldHeaders || result.headers.length !== oldHeaders.length))) {
+      tab.data = result.data;
+      tab.headers = result.headers;
+      this.markTabUnsaved(tab);
+
+      tab.history.push({
+        type: 'FULL_TABLE_REPLACE',
+        oldData,
+        newData: JSON.parse(JSON.stringify(tab.data)),
+        oldHeaders,
+        newHeaders: tab.headers ? [...tab.headers] : null
+      });
+
+      this.grid.setData(tab.data, tab.headers, false, tab.colWidths);
+      this.grid.autoFitAllColumns();
+      this.saveNow();
+
+      document.getElementById('imageUrlBuilderModal')?.classList.remove('active');
+      this.grid.wrapper?.focus({ preventScroll: true });
+
+      const countImages = endIndex - startIndex + 1;
+      this.showToast(`Wygenerowano <b>${result.generatedCount}</b> linków do zdjęć (${countImages} na produkt, <b>${result.rowsProcessed}</b> wierszy)!`, 'success');
+    } else {
+      this.showToast('Nie znaleziono wierszy ze SKU lub linki były już aktualne', 'info');
+      document.getElementById('imageUrlBuilderModal')?.classList.remove('active');
+    }
+  }
+
   bindModals() {
     const shortcutsModal = document.getElementById('shortcutsModal');
     document.getElementById('shortcutsBtn')?.addEventListener('click', () => {
@@ -2162,17 +2430,47 @@ class CSVApp {
       }
     });
 
+    // Image URL Builder bindings
+    const imgUrlModal = document.getElementById('imageUrlBuilderModal');
+    document.getElementById('imageUrlBuilderBtn')?.addEventListener('click', () => this.openImageUrlBuilderModal());
+    document.getElementById('menuImageUrlBuilderBtn')?.addEventListener('click', () => this.openImageUrlBuilderModal());
+    document.getElementById('closeImageUrlModal')?.addEventListener('click', () => {
+      imgUrlModal?.classList.remove('active');
+    });
+    document.getElementById('cancelImageUrlBtn')?.addEventListener('click', () => {
+      imgUrlModal?.classList.remove('active');
+    });
+    document.getElementById('doGenerateImgUrlsBtn')?.addEventListener('click', () => this.executeGenerateImageUrls());
+
+    const updatePreviewHandler = () => this.updateImageUrlPreview();
+    document.getElementById('imgUrlSourceCol')?.addEventListener('change', updatePreviewHandler);
+    document.getElementById('imgUrlTemplate')?.addEventListener('input', updatePreviewHandler);
+    document.getElementById('imgUrlStartIdx')?.addEventListener('input', updatePreviewHandler);
+    document.getElementById('imgUrlEndIdx')?.addEventListener('input', updatePreviewHandler);
+    document.getElementById('imgUrlNamingEcom')?.addEventListener('change', updatePreviewHandler);
+    document.getElementById('imgUrlNamingCustom')?.addEventListener('change', updatePreviewHandler);
+    document.getElementById('imgUrlCustomHeaderPattern')?.addEventListener('input', updatePreviewHandler);
+
+    document.querySelectorAll('#imageUrlBuilderModal .tag-chip').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const insertText = btn.dataset.insert;
+        const input = document.getElementById('imgUrlTemplate');
+        if (input && insertText) {
+          const start = input.selectionStart || input.value.length;
+          const end = input.selectionEnd || input.value.length;
+          input.value = input.value.substring(0, start) + insertText + input.value.substring(end);
+          input.focus();
+          input.selectionStart = input.selectionEnd = start + insertText.length;
+          this.updateImageUrlPreview();
+        }
+      });
+    });
+
     document.getElementById('cleanTrimBtn').addEventListener('click', () => {
       const tab = this.getActiveTab();
       if (!tab) return;
-      const { minRow, maxRow, minCol, maxCol } = this.grid.getNormalizedSelection();
-      const coords = [];
-      for (let r = minRow; r <= maxRow; r++) {
-        const actualR = this.grid.rowIndices[r];
-        for (let c = minCol; c <= maxCol; c++) {
-          coords.push({ row: actualR, col: c });
-        }
-      }
+      const coords = this.grid ? this.grid.getSelectedCoordinates() : [];
       const changes = CSVOperations.transformCells(tab.data, coords, 'trim');
       if (changes.length > 0) {
         this.markTabUnsaved(tab);
@@ -2325,6 +2623,15 @@ class CSVApp {
         if (replaceModal && replaceModal.classList.contains('active')) {
           e.preventDefault();
           replaceModal.classList.remove('active');
+          this.grid?.wrapper?.focus({ preventScroll: true });
+          return;
+        }
+
+        // 1b. Modal Generator URL Zdjęć
+        const imgUrlModal = document.getElementById('imageUrlBuilderModal');
+        if (imgUrlModal && imgUrlModal.classList.contains('active')) {
+          e.preventDefault();
+          imgUrlModal.classList.remove('active');
           this.grid?.wrapper?.focus({ preventScroll: true });
           return;
         }
