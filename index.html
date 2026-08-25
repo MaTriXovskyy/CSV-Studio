@@ -31,7 +31,7 @@
         <div class="brand-section">
           <span class="brand-icon"><i data-lucide="sheet" style="width:16px; height:16px;"></i></span>
           <span>CSV Studio</span>
-          <span class="brand-tag">v2.2</span>
+          <span class="brand-tag">v2.3</span>
         </div>
 
         <nav class="menubar">
@@ -162,7 +162,7 @@
               <div class="dropdown-action" id="menuImageUrlBuilderBtn">
                 <div class="dropdown-action-left">
                   <i data-lucide="images"></i>
-                  <span>Generator linków do zdjęć (URL Builder)...</span>
+                  <span>Generator linków do zdjęć produktów...</span>
                 </div>
               </div>
               <div class="dropdown-divider"></div>
@@ -542,105 +542,61 @@
       </div>
     </div>
 
-    <!-- Okno modalne: Generator Produktów i URL Zdjęć (Bulk & Image URL Builder) -->
+    <!-- Okno modalne: Generator linków do zdjęć produktów -->
     <div class="modal-overlay" id="imageUrlBuilderModal">
       <div class="modal-box" style="max-width: 620px;">
         <div class="modal-header">
           <div class="modal-title" style="display:flex; align-items:center; gap:6px;">
-            <i data-lucide="sparkles" style="color:var(--accent-primary);"></i>
-            <span>Generator Produktów i Zdjęć CSV</span>
+            <i data-lucide="images" style="color:var(--accent-primary);"></i>
+            <span>Generator linków do zdjęć produktów</span>
           </div>
           <button class="modal-close-btn" id="closeImageUrlModal">&times;</button>
         </div>
         <div class="modal-body">
-          <!-- Zakładki trybu -->
-          <div class="modal-tabs">
-            <button type="button" class="modal-tab-btn active" id="tabBulkProducts">
-              <i data-lucide="layers" style="width:14px; height:14px;"></i>
-              <span>Masowy generator (Tytuł + Symbol + Kolory)</span>
-            </button>
-            <button type="button" class="modal-tab-btn" id="tabExistingCols">
-              <i data-lucide="table" style="width:14px; height:14px;"></i>
-              <span>Wypełnij istniejące wiersze</span>
-            </button>
+          <div class="form-row">
+            <div class="form-group" style="flex: 1.3;">
+              <label class="form-label">Tytuł bazowy:</label>
+              <input type="text" class="form-input" id="bulkBaseTitle" placeholder="np. Schodki dla psów - mała chmurka" value="Schodki dla psów - mała chmurka">
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label">Bazowy Symbol / SKU:</label>
+              <input type="text" class="form-input" id="bulkBaseSku" placeholder="np. P-ST02-30-30-45" value="P-ST02-30-30-45">
+            </div>
           </div>
 
-          <!-- Sekcja 1: Masowy Generator Produktów (Tytuł + Symbol + Kolory) -->
-          <div id="bulkProductSection">
-            <div class="form-row">
-              <div class="form-group" style="flex: 1.3;">
-                <label class="form-label">Tytuł bazowy:</label>
-                <input type="text" class="form-input" id="bulkBaseTitle" placeholder="np. Schodki dla psów - mała chmurka" value="Schodki dla psów - mała chmurka">
-              </div>
-              <div class="form-group" style="flex: 1;">
-                <label class="form-label">Bazowy Symbol / SKU:</label>
-                <input type="text" class="form-input" id="bulkBaseSku" placeholder="np. P-ST02-30-30-45" value="P-ST02-30-30-45">
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Warianty / Kolory (rozdzielone przecinkiem, spacją lub zakres np. <code>C01-C10</code>):</label>
-              <input type="text" class="form-input" id="bulkColorsInput" placeholder="np. C01, C02, C03 lub C01-C10" value="C01, C02, C03">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px;">
-                <div class="tag-chip-group">
-                  <span style="font-size:11px; color:var(--text-muted);">Szybki zakres:</span>
-                  <button type="button" class="tag-chip" data-set-colors="C01, C02, C03">C01..C03</button>
-                  <button type="button" class="tag-chip" data-set-colors="C01-C05">C01..C05</button>
-                  <button type="button" class="tag-chip" data-set-colors="C01-C10">C01..C10</button>
-                  <button type="button" class="tag-chip" data-set-colors="C01-C20">C01..C20</button>
-                </div>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Gdzie wstawić wygenerowane produkty:</label>
-              <div class="scope-selector-group" style="flex-direction:row; flex-wrap:wrap; gap:16px;">
-                <label class="scope-option">
-                  <input type="radio" name="bulkInsertAction" value="append" id="bulkActionAppend" checked>
-                  <span>Dopisz do arkusza</span>
-                </label>
-                <label class="scope-option">
-                  <input type="radio" name="bulkInsertAction" value="replace" id="bulkActionReplace">
-                  <span>Zastąp cały arkusz</span>
-                </label>
-                <label class="scope-option">
-                  <input type="radio" name="bulkInsertAction" value="newTab" id="bulkActionNewTab">
-                  <span>Nowy arkusz</span>
-                </label>
+          <div class="form-group">
+            <label class="form-label">Warianty / Kolory (rozdzielone przecinkiem, spacją lub zakres np. <code>C01-C10</code>):</label>
+            <input type="text" class="form-input" id="bulkColorsInput" placeholder="np. C01, C02, C03 lub C01-C10" value="C01, C02, C03">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px;">
+              <div class="tag-chip-group">
+                <span style="font-size:11px; color:var(--text-muted);">Szybki zakres:</span>
+                <button type="button" class="tag-chip" data-set-colors="C01, C02, C03">C01..C03</button>
+                <button type="button" class="tag-chip" data-set-colors="C01-C05">C01..C05</button>
+                <button type="button" class="tag-chip" data-set-colors="C01-C10">C01..C10</button>
+                <button type="button" class="tag-chip" data-set-colors="C01-C20">C01..C20</button>
               </div>
             </div>
           </div>
 
-          <!-- Sekcja 2: Wypełnianie istniejącej tabeli z wybranej kolumny SKU -->
-          <div id="existingColSection" style="display:none;">
-            <div class="form-row">
-              <div class="form-group" style="flex: 2;">
-                <label class="form-label">Kolumna źródłowa (SKU / Symbol):</label>
-                <select class="form-select" id="imgUrlSourceCol"></select>
-              </div>
-              <div class="form-group" style="flex: 1;">
-                <label class="form-label">Zakres wierszy:</label>
-                <div style="display:flex; gap:10px; margin-top:4px;">
-                  <label class="form-checkbox-label">
-                    <input type="radio" name="imgUrlScope" value="all" id="imgUrlScopeAll" checked>
-                    <span>Wszystkie</span>
-                  </label>
-                  <label class="form-checkbox-label">
-                    <input type="radio" name="imgUrlScope" value="selection" id="imgUrlScopeSelection">
-                    <span>Zaznaczone</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-            <div class="form-group">
-              <label class="form-checkbox-label" style="margin-top:2px;">
-                <input type="checkbox" class="form-checkbox" id="imgUrlClearExtra" checked>
-                <span>Wyczyść puste nadmiarowe kolumny zdjęć</span>
+          <div class="form-group">
+            <label class="form-label">Gdzie wstawić wygenerowane produkty:</label>
+            <div class="scope-selector-group" style="flex-direction:row; flex-wrap:wrap; gap:16px;">
+              <label class="scope-option">
+                <input type="radio" name="bulkInsertAction" value="append" id="bulkActionAppend" checked>
+                <span>Dopisz do arkusza</span>
+              </label>
+              <label class="scope-option">
+                <input type="radio" name="bulkInsertAction" value="replace" id="bulkActionReplace">
+                <span>Zastąp cały arkusz</span>
+              </label>
+              <label class="scope-option">
+                <input type="radio" name="bulkInsertAction" value="newTab" id="bulkActionNewTab">
+                <span>Nowy arkusz</span>
               </label>
             </div>
           </div>
 
-          <!-- Wspólne ustawienia szablonu zdjęć -->
+          <!-- Ustawienia szablonu zdjęć -->
           <div class="form-group" style="margin-top:10px; border-top:1px solid var(--border-color); padding-top:10px;">
             <label class="form-label">Szablon adresu URL zdjęcia:</label>
             <input type="text" class="form-input" id="imgUrlTemplate" placeholder="np. https://serwer.pl/zdjecia/{SKU}/{SKU}-{N}.jpg" value="https://search.doboxa.biz/upload/adph/PET/PET-ST02/Murando/CORD/{SKU}/{SKU}-{N}.jpg">
@@ -689,7 +645,7 @@
           <button class="btn btn-secondary" id="cancelImageUrlBtn">Anuluj</button>
           <button class="btn btn-primary" id="doGenerateImgUrlsBtn">
             <i data-lucide="sparkles"></i>
-            <span id="doGenerateBtnText">Generuj masowo warianty</span>
+            <span id="doGenerateBtnText">Generuj linki do zdjęć</span>
           </button>
         </div>
       </div>

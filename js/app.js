@@ -2079,7 +2079,7 @@ class CSVApp {
     }
   }
 
-  openImageUrlBuilderModal(targetColIndex = null, initialTab = 'bulk') {
+  openImageUrlBuilderModal() {
     const tab = this.getActiveTab();
     if (!tab) return;
 
@@ -2089,46 +2089,9 @@ class CSVApp {
     const bulkBaseTitle = document.getElementById('bulkBaseTitle');
     const bulkBaseSku = document.getElementById('bulkBaseSku');
     const bulkColorsInput = document.getElementById('bulkColorsInput');
-    const colSelect = document.getElementById('imgUrlSourceCol');
     const templateInput = document.getElementById('imgUrlTemplate');
     const startIdxInput = document.getElementById('imgUrlStartIdx');
     const endIdxInput = document.getElementById('imgUrlEndIdx');
-    const namingSelect = document.getElementById('imgUrlNamingSelect');
-    const customPatternWrapper = document.getElementById('customHeaderPatternWrapper');
-    const customPatternInput = document.getElementById('imgUrlCustomHeaderPattern');
-
-    // Wypełnij listę dostępnych kolumn dla zakładki istniejących wierszy
-    if (colSelect) {
-      colSelect.innerHTML = '';
-      const colCount = this.grid ? this.grid.getColCount() : (tab.headers ? tab.headers.length : 0);
-      let defaultSelected = targetColIndex !== null ? targetColIndex : 0;
-      let foundSkuCol = false;
-
-      for (let c = 0; c < colCount; c++) {
-        const letter = CSVParser.columnIndexToLetter(c);
-        const headerName = (tab.headers && tab.headers[c]) ? tab.headers[c] : letter;
-        const opt = document.createElement('option');
-        opt.value = c;
-        opt.textContent = `${letter}: ${headerName}`;
-        colSelect.appendChild(opt);
-
-        if (targetColIndex === null && !foundSkuCol) {
-          const normH = headerName.toLowerCase();
-          if (normH.includes('symbol') || normH.includes('sku') || normH.includes('kod') || normH.includes('id') || normH.includes('model')) {
-            defaultSelected = c;
-            foundSkuCol = true;
-          }
-        }
-      }
-
-      if (targetColIndex !== null) {
-        colSelect.value = targetColIndex;
-      } else if (foundSkuCol) {
-        colSelect.value = defaultSelected;
-      } else if (this.grid && this.grid.activeCell && this.grid.activeCell.col !== undefined) {
-        colSelect.value = this.grid.activeCell.col;
-      }
-    }
 
     // Wczytaj zapamiętane wartości
     const savedTitle = localStorage.getItem('csv_studio_bulk_title');
@@ -2153,53 +2116,23 @@ class CSVApp {
     const savedEnd = localStorage.getItem('csv_studio_img_url_end');
     if (savedEnd && endIdxInput) endIdxInput.value = savedEnd;
 
-    // Przełącz na odpowiednią zakładkę
-    this.setBuilderTab(targetColIndex !== null ? 'existing' : initialTab);
-
     modal.classList.add('active');
     this.refreshIcons();
     this.updateImageUrlPreview();
 
     setTimeout(() => {
-      if (targetColIndex !== null) {
-        templateInput?.focus();
-      } else {
-        bulkBaseTitle?.focus();
-        bulkBaseTitle?.select();
-      }
+      bulkBaseTitle?.focus();
+      bulkBaseTitle?.select();
     }, 50);
   }
 
-  setBuilderTab(tabMode) {
-    const tabBulkBtn = document.getElementById('tabBulkProducts');
-    const tabExistingBtn = document.getElementById('tabExistingCols');
-    const bulkSection = document.getElementById('bulkProductSection');
-    const existingSection = document.getElementById('existingColSection');
-    const doGenerateBtnText = document.getElementById('doGenerateBtnText');
-
-    if (tabMode === 'bulk') {
-      tabBulkBtn?.classList.add('active');
-      tabExistingBtn?.classList.remove('active');
-      if (bulkSection) bulkSection.style.display = 'block';
-      if (existingSection) existingSection.style.display = 'none';
-      if (doGenerateBtnText) doGenerateBtnText.textContent = 'Generuj masowo warianty';
-    } else {
-      tabExistingBtn?.classList.add('active');
-      tabBulkBtn?.classList.remove('active');
-      if (bulkSection) bulkSection.style.display = 'none';
-      if (existingSection) existingSection.style.display = 'block';
-      if (doGenerateBtnText) doGenerateBtnText.textContent = 'Wypełnij linki do zdjęć';
-    }
-
-    this.updateImageUrlPreview();
-  }
-
   updateImageUrlPreview() {
-    const tab = this.getActiveTab();
     const previewBox = document.getElementById('imgUrlPreviewContainer');
     if (!previewBox) return;
 
-    const isBulk = document.getElementById('tabBulkProducts')?.classList.contains('active');
+    const baseTitle = document.getElementById('bulkBaseTitle')?.value || '';
+    const baseSku = document.getElementById('bulkBaseSku')?.value || '';
+    const colorsInput = document.getElementById('bulkColorsInput')?.value || '';
     const templateInput = document.getElementById('imgUrlTemplate');
     const startIdxInput = document.getElementById('imgUrlStartIdx');
     const endIdxInput = document.getElementById('imgUrlEndIdx');
@@ -2218,192 +2151,108 @@ class CSVApp {
       customPatternWrapper.style.display = isCustomNaming ? 'block' : 'none';
     }
 
-    if (isBulk) {
-      // 1. Tryb masowego generatora produktów
-      const baseTitle = document.getElementById('bulkBaseTitle')?.value || '';
-      const baseSku = document.getElementById('bulkBaseSku')?.value || '';
-      const colorsInput = document.getElementById('bulkColorsInput')?.value || '';
+    const colors = CSVOperations.parseVariantColors(colorsInput);
+    const photoCount = endIdx - startIdx + 1;
 
-      const colors = CSVOperations.parseVariantColors(colorsInput);
-      const photoCount = endIdx - startIdx + 1;
-
-      if (colors.length === 0) {
-        previewBox.innerHTML = '<div style="color:var(--text-muted); font-size:11px;">Wpisz co najmniej jeden kod koloru / wariantu (np. <code>C01, C02, C03</code> lub <code>C01-C10</code>)...</div>';
-        if (doGenerateBtnText) doGenerateBtnText.textContent = 'Generuj masowo warianty';
-        return;
-      }
-
-      if (doGenerateBtnText) {
-        doGenerateBtnText.textContent = `Generuj masówkę (${colors.length} wariantów × ${photoCount} zdjęć)`;
-      }
-
-      let previewHTML = `<div style="margin-bottom:8px; color:var(--text-secondary); font-size:11px; font-weight:600; display:flex; align-items:center; gap:8px;">
-        <span>Warianty: <span class="scope-badge">${colors.length} produktów</span></span>
-        <span>Zdjęcia: <span class="scope-badge">${photoCount} na produkt</span></span>
-        <span>Razem: <span class="scope-badge" style="background:var(--accent-primary); color:white;">${colors.length * photoCount} linków URL</span></span>
-      </div>`;
-
-      const previewColors = colors.slice(0, 3);
-      for (const color of previewColors) {
-        let title = baseTitle.trim();
-        if (title.includes('{KOLOR}') || title.includes('{COLOR}')) {
-          title = title.replace(/\{KOLOR\}|\{COLOR\}/gi, color);
-        } else if (title) {
-          title = title.endsWith(' ') ? title + color : `${title} ${color}`;
-        } else {
-          title = color;
-        }
-
-        let sku = baseSku.trim();
-        if (sku.includes('{KOLOR}') || sku.includes('{COLOR}') || sku.includes('{K}')) {
-          sku = sku.replace(/\{KOLOR\}|\{COLOR\}|\{K\}/gi, color);
-        } else if (sku) {
-          sku = (sku.endsWith('-') || sku.endsWith('_')) ? sku + color : `${sku}-${color}`;
-        } else {
-          sku = color;
-        }
-
-        const escapedTitle = this.grid ? this.grid.escapeHTML(title) : title;
-        const escapedSku = this.grid ? this.grid.escapeHTML(sku) : sku;
-
-        previewHTML += `
-          <div style="background:var(--bg-secondary); border-radius:6px; padding:6px 8px; margin-bottom:6px; border:1px solid var(--border-color);">
-            <div style="font-size:11.5px; font-weight:bold; color:var(--accent-primary); margin-bottom:4px; display:flex; align-items:center;">
-              <i data-lucide="package" style="width:13px; height:13px; margin-right:5px; flex-shrink:0;"></i>
-              <span>${escapedTitle}</span>
-              <span style="font-size:10.5px; color:var(--text-muted); font-weight:normal; margin-left:6px;">[Symbol: ${escapedSku}]</span>
-            </div>
-        `;
-
-        const limitPhotos = Math.min(endIdx, startIdx + 2);
-        for (let n = startIdx; n <= limitPhotos; n++) {
-          let headerName = '';
-          if (!isCustomNaming) {
-            headerName = (n === 1) ? 'Zdjęcie główne' : `Zdjęcie dodatkowe ${n - 1}`;
-          } else {
-            headerName = customPattern.replace(/\{N0\}/g, String(n).padStart(2, '0')).replace(/\{N\}/g, String(n));
-          }
-
-          const nStr = String(n);
-          const n0Str = String(n).padStart(2, '0');
-          let url = template
-            .replace(/\{SKU\}|\{VAL\}/gi, sku)
-            .replace(/\{KOLOR\}|\{COLOR\}/gi, color)
-            .replace(/\{N0\}/g, n0Str)
-            .replace(/\{N\}/g, nStr);
-
-          const escapedH = this.grid ? this.grid.escapeHTML(headerName) : headerName;
-          const escapedUrl = this.grid ? this.grid.escapeHTML(url) : url;
-
-          previewHTML += `
-            <div class="url-preview-item" style="font-size:10.5px;">
-              <span class="url-preview-label" style="min-width:110px;">${escapedH}:</span>
-              <span class="url-preview-val">${escapedUrl}</span>
-            </div>
-          `;
-        }
-
-        if (endIdx > limitPhotos) {
-          previewHTML += `<div style="color:var(--text-muted); font-size:10px; margin-top:2px;">... i jeszcze ${endIdx - limitPhotos} zdjęć</div>`;
-        }
-
-        previewHTML += `</div>`;
-      }
-
-      if (colors.length > previewColors.length) {
-        previewHTML += `<div style="color:var(--text-muted); font-size:10.5px; text-align:center; margin-top:4px;">... oraz ${colors.length - previewColors.length} kolejnych wariantów</div>`;
-      }
-
-      previewBox.innerHTML = previewHTML;
-      this.refreshIcons();
+    if (colors.length === 0) {
+      previewBox.innerHTML = '<div style="color:var(--text-muted); font-size:11px;">Wpisz co najmniej jeden kod koloru / wariantu (np. <code>C01, C02, C03</code> lub <code>C01-C10</code>)...</div>';
+      if (doGenerateBtnText) doGenerateBtnText.textContent = 'Generuj linki do zdjęć';
       return;
     }
 
-    // 2. Tryb wypełniania istniejącej tabeli
-    if (!tab || !tab.data || tab.data.length === 0) {
-      previewBox.innerHTML = '<div style="color:var(--text-muted); font-size:11px;">Brak danych w arkuszu do podglądu</div>';
-      return;
+    if (doGenerateBtnText) {
+      doGenerateBtnText.textContent = `Generuj linki do zdjęć (${colors.length} wariantów × ${photoCount} zdjęć)`;
     }
 
-    const colSelect = document.getElementById('imgUrlSourceCol');
-    const sourceCol = colSelect ? parseInt(colSelect.value, 10) : 0;
-
-    if (!template) {
-      previewBox.innerHTML = '<div style="color:var(--text-muted); font-size:11px;">Wpisz szablon adresu URL, aby zobaczyć podgląd linków...</div>';
-      return;
-    }
-
-    const startRow = tab.hasHeader ? 1 : 0;
-    let sampleRow = null;
-    for (let r = startRow; r < tab.data.length; r++) {
-      if (tab.data[r] && tab.data[r][sourceCol] && String(tab.data[r][sourceCol]).trim() !== '') {
-        sampleRow = tab.data[r];
-        break;
-      }
-    }
-
-    if (!sampleRow) {
-      sampleRow = tab.data[startRow] || ['P-ST02-30-30-45-C01'];
-    }
-
-    const sampleSku = String(sampleRow[sourceCol] || 'P-ST02-30-30-45-C01').trim();
-    const rowTitle = (sampleRow[0] && sourceCol !== 0) ? String(sampleRow[0]).trim() : '';
-
-    let previewHTML = `<div style="margin-bottom:6px; color:var(--text-secondary); font-size:11.5px; font-weight:600;">
-      Przykładowy produkt: <span style="color:var(--accent-primary); font-family:var(--font-mono);">${this.grid ? this.grid.escapeHTML(sampleSku) : sampleSku}</span>
-      ${rowTitle ? `<span style="color:var(--text-muted); font-weight:normal; margin-left:6px;">(${this.grid ? this.grid.escapeHTML(rowTitle) : rowTitle})</span>` : ''}
+    let previewHTML = `<div style="margin-bottom:8px; color:var(--text-secondary); font-size:11px; font-weight:600; display:flex; align-items:center; gap:8px;">
+      <span>Warianty: <span class="scope-badge">${colors.length} produktów</span></span>
+      <span>Zdjęcia: <span class="scope-badge">${photoCount} na produkt</span></span>
+      <span>Razem: <span class="scope-badge" style="background:var(--accent-primary); color:white;">${colors.length * photoCount} linków URL</span></span>
     </div>`;
 
-    const limit = Math.min(endIdx, startIdx + 7);
-    for (let n = startIdx; n <= limit; n++) {
-      let headerName = '';
-      if (!isCustomNaming) {
-        headerName = (n === 1) ? 'Zdjęcie główne (URL)' : `Zdjęcie dodatkowe ${n - 1} (URL)`;
+    const previewColors = colors.slice(0, 3);
+    for (const color of previewColors) {
+      let title = baseTitle.trim();
+      if (title.includes('{KOLOR}') || title.includes('{COLOR}')) {
+        title = title.replace(/\{KOLOR\}|\{COLOR\}/gi, color);
+      } else if (title) {
+        title = title.endsWith(' ') ? title + color : `${title} ${color}`;
       } else {
-        headerName = customPattern.replace(/\{N0\}/g, String(n).padStart(2, '0')).replace(/\{N\}/g, String(n));
+        title = color;
       }
 
-      const nStr = String(n);
-      const n0Str = String(n).padStart(2, '0');
-      let url = template
-        .replace(/\{SKU\}|\{VAL\}/gi, sampleSku)
-        .replace(/\{N0\}/g, n0Str)
-        .replace(/\{N\}/g, nStr);
-
-      if (typeof CSVParser !== 'undefined' && CSVParser.letterToColumnIndex) {
-        url = url.replace(/\{COL:([A-Za-z]+)\}/gi, (_, letter) => {
-          const cIdx = CSVParser.letterToColumnIndex(letter.toUpperCase());
-          return (sampleRow[cIdx] !== undefined && sampleRow[cIdx] !== null) ? String(sampleRow[cIdx]).trim() : '';
-        });
+      let sku = baseSku.trim();
+      if (sku.includes('{KOLOR}') || sku.includes('{COLOR}') || sku.includes('{K}')) {
+        sku = sku.replace(/\{KOLOR\}|\{COLOR\}|\{K\}/gi, color);
+      } else if (sku) {
+        sku = (sku.endsWith('-') || sku.endsWith('_')) ? sku + color : `${sku}-${color}`;
+      } else {
+        sku = color;
       }
-      url = url.replace(/\{COL:(\d+)\}/g, (_, idxStr) => {
-        const cIdx = parseInt(idxStr, 10);
-        return (sampleRow[cIdx] !== undefined && sampleRow[cIdx] !== null) ? String(sampleRow[cIdx]).trim() : '';
-      });
 
-      const escapedH = this.grid ? this.grid.escapeHTML(headerName) : headerName;
-      const escapedUrl = this.grid ? this.grid.escapeHTML(url) : url;
+      const escapedTitle = this.grid ? this.grid.escapeHTML(title) : title;
+      const escapedSku = this.grid ? this.grid.escapeHTML(sku) : sku;
 
       previewHTML += `
-        <div class="url-preview-item">
-          <span class="url-preview-label">${escapedH}:</span>
-          <span class="url-preview-val">${escapedUrl}</span>
-        </div>
+        <div style="background:var(--bg-secondary); border-radius:6px; padding:6px 8px; margin-bottom:6px; border:1px solid var(--border-color);">
+          <div style="font-size:11.5px; font-weight:bold; color:var(--accent-primary); margin-bottom:4px; display:flex; align-items:center;">
+            <i data-lucide="package" style="width:13px; height:13px; margin-right:5px; flex-shrink:0;"></i>
+            <span>${escapedTitle}</span>
+            <span style="font-size:10.5px; color:var(--text-muted); font-weight:normal; margin-left:6px;">[Symbol: ${escapedSku}]</span>
+          </div>
       `;
+
+      const limitPhotos = Math.min(endIdx, startIdx + 2);
+      for (let n = startIdx; n <= limitPhotos; n++) {
+        let headerName = '';
+        if (!isCustomNaming) {
+          headerName = (n === 1) ? 'Zdjęcie główne' : `Zdjęcie dodatkowe ${n - 1}`;
+        } else {
+          headerName = customPattern.replace(/\{N0\}/g, String(n).padStart(2, '0')).replace(/\{N\}/g, String(n));
+        }
+
+        const nStr = String(n);
+        const n0Str = String(n).padStart(2, '0');
+        let url = template
+          .replace(/\{SKU\}|\{VAL\}/gi, sku)
+          .replace(/\{KOLOR\}|\{COLOR\}/gi, color)
+          .replace(/\{N0\}/g, n0Str)
+          .replace(/\{N\}/g, nStr);
+
+        const escapedH = this.grid ? this.grid.escapeHTML(headerName) : headerName;
+        const escapedUrl = this.grid ? this.grid.escapeHTML(url) : url;
+
+        previewHTML += `
+          <div class="url-preview-item" style="font-size:10.5px;">
+            <span class="url-preview-label" style="min-width:110px;">${escapedH}:</span>
+            <span class="url-preview-val">${escapedUrl}</span>
+          </div>
+        `;
+      }
+
+      if (endIdx > limitPhotos) {
+        previewHTML += `<div style="color:var(--text-muted); font-size:10px; margin-top:2px;">... i jeszcze ${endIdx - limitPhotos} zdjęć</div>`;
+      }
+
+      previewHTML += `</div>`;
     }
 
-    if (endIdx > limit) {
-      previewHTML += `<div style="color:var(--text-muted); font-size:10px; margin-top:4px;">... oraz ${endIdx - limit} kolejnych zdjęć</div>`;
+    if (colors.length > previewColors.length) {
+      previewHTML += `<div style="color:var(--text-muted); font-size:10.5px; text-align:center; margin-top:4px;">... oraz ${colors.length - previewColors.length} kolejnych wariantów</div>`;
     }
 
     previewBox.innerHTML = previewHTML;
+    this.refreshIcons();
   }
 
   executeGenerateImageUrls() {
     const tab = this.getActiveTab();
     if (!tab) return;
 
-    const isBulk = document.getElementById('tabBulkProducts')?.classList.contains('active');
+    const baseTitle = document.getElementById('bulkBaseTitle')?.value || '';
+    const baseSku = document.getElementById('bulkBaseSku')?.value || '';
+    const colorsInput = document.getElementById('bulkColorsInput')?.value || '';
+    const insertAction = document.querySelector('input[name="bulkInsertAction"]:checked')?.value || 'append';
     const templateInput = document.getElementById('imgUrlTemplate');
     const startIdxInput = document.getElementById('imgUrlStartIdx');
     const endIdxInput = document.getElementById('imgUrlEndIdx');
@@ -2422,169 +2271,95 @@ class CSVApp {
       return;
     }
 
-    localStorage.setItem('csv_studio_img_url_tpl', urlTemplate);
-    localStorage.setItem('csv_studio_img_url_start', String(startIndex));
-    localStorage.setItem('csv_studio_img_url_end', String(endIndex));
-
-    if (isBulk) {
-      // 1. Tryb masowego generatora produktów
-      const baseTitle = document.getElementById('bulkBaseTitle')?.value || '';
-      const baseSku = document.getElementById('bulkBaseSku')?.value || '';
-      const colorsInput = document.getElementById('bulkColorsInput')?.value || '';
-      const insertAction = document.querySelector('input[name="bulkInsertAction"]:checked')?.value || 'append';
-
-      const colors = CSVOperations.parseVariantColors(colorsInput);
-      if (colors.length === 0) {
-        this.showToast('Wpisz co najmniej jeden kod koloru / wariantu', 'warning');
-        document.getElementById('bulkColorsInput')?.focus();
-        return;
-      }
-
-      localStorage.setItem('csv_studio_bulk_title', baseTitle);
-      localStorage.setItem('csv_studio_bulk_sku', baseSku);
-      localStorage.setItem('csv_studio_bulk_colors', colorsInput);
-
-      const bulkRes = CSVOperations.generateBulkProducts({
-        baseTitle,
-        baseSku,
-        colorsInput,
-        urlTemplate,
-        startIndex,
-        endIndex,
-        namingMode,
-        customHeaderPattern
-      });
-
-      if (bulkRes.count === 0) {
-        this.showToast('Nie udało się wygenerować wariantów', 'warning');
-        return;
-      }
-
-      const totalPhotos = endIndex - startIndex + 1;
-
-      if (insertAction === 'newTab') {
-        const tabTitle = (baseTitle || 'Warianty').replace(/[\/\\?%*:|"<>]/g, '_').slice(0, 20) + '.csv';
-        this.createNewTab(tabTitle, [bulkRes.headers, ...bulkRes.rows]);
-        document.getElementById('imageUrlBuilderModal')?.classList.remove('active');
-        this.showToast(`Utworzono nowy arkusz z <b>${bulkRes.count}</b> produktami (${totalPhotos} zdjęć każdy)!`, 'success');
-        return;
-      }
-
-      const oldData = JSON.parse(JSON.stringify(tab.data));
-      const oldHeaders = tab.headers ? [...tab.headers] : null;
-
-      // Sprawdź czy bieżący arkusz jest pusty
-      const isSheetEmpty = !tab.data || tab.data.length === 0 || 
-        (tab.data.length <= 1 && (!tab.data[0] || tab.data[0].every(c => !c || c === ''))) ||
-        (tab.data.length === 25 && tab.data.every(r => r.every(c => !c || c === '')));
-
-      if (insertAction === 'replace' || isSheetEmpty) {
-        tab.data = [bulkRes.headers, ...bulkRes.rows];
-        tab.headers = [...bulkRes.headers];
-        tab.hasHeader = true;
-      } else {
-        // Dopisz do istniejącego arkusza
-        if (!tab.headers || tab.headers.length === 0) {
-          tab.headers = [...bulkRes.headers];
-        } else {
-          // Upewnij się, że tabela ma wszystkie potrzebne kolumny
-          while (tab.headers.length < bulkRes.headers.length) {
-            tab.headers.push(bulkRes.headers[tab.headers.length]);
-          }
-        }
-
-        // Dopasuj istniejące wiersze do liczby kolumn
-        for (const r of tab.data) {
-          while (r.length < tab.headers.length) r.push('');
-        }
-
-        // Dodaj nowe wiersze
-        for (const newRow of bulkRes.rows) {
-          const rowPadded = [...newRow];
-          while (rowPadded.length < tab.headers.length) rowPadded.push('');
-          tab.data.push(rowPadded);
-        }
-      }
-
-      this.markTabUnsaved(tab);
-      tab.history.push({
-        type: 'FULL_TABLE_REPLACE',
-        oldData,
-        newData: JSON.parse(JSON.stringify(tab.data)),
-        oldHeaders,
-        newHeaders: tab.headers ? [...tab.headers] : null
-      });
-
-      this.grid.setData(tab.data, tab.headers, false, tab.colWidths);
-      this.grid.autoFitAllColumns();
-      this.saveNow();
-
-      document.getElementById('imageUrlBuilderModal')?.classList.remove('active');
-      this.grid.wrapper?.focus({ preventScroll: true });
-      this.showToast(`Wygenerowano <b>${bulkRes.count}</b> produktów (<b>${bulkRes.count * totalPhotos}</b> linków do zdjęć)!`, 'success');
+    const colors = CSVOperations.parseVariantColors(colorsInput);
+    if (colors.length === 0) {
+      this.showToast('Wpisz co najmniej jeden kod koloru / wariantu', 'warning');
+      document.getElementById('bulkColorsInput')?.focus();
       return;
     }
 
-    // 2. Tryb wypełniania istniejących wierszy
-    const colSelect = document.getElementById('imgUrlSourceCol');
-    const scopeSelection = document.getElementById('imgUrlScopeSelection');
-    const clearExtraCheckbox = document.getElementById('imgUrlClearExtra');
+    localStorage.setItem('csv_studio_img_url_tpl', urlTemplate);
+    localStorage.setItem('csv_studio_img_url_start', String(startIndex));
+    localStorage.setItem('csv_studio_img_url_end', String(endIndex));
+    localStorage.setItem('csv_studio_bulk_title', baseTitle);
+    localStorage.setItem('csv_studio_bulk_sku', baseSku);
+    localStorage.setItem('csv_studio_bulk_colors', colorsInput);
 
-    const sourceColIndex = colSelect ? parseInt(colSelect.value, 10) : 0;
-    const isSelectionScope = scopeSelection?.checked || false;
-    const clearExtraImageCols = clearExtraCheckbox ? clearExtraCheckbox.checked : true;
+    const bulkRes = CSVOperations.generateBulkProducts({
+      baseTitle,
+      baseSku,
+      colorsInput,
+      urlTemplate,
+      startIndex,
+      endIndex,
+      namingMode,
+      customHeaderPattern
+    });
 
-    let rowIndices = null;
-    if (isSelectionScope && this.grid) {
-      const norm = this.grid.getNormalizedSelection();
-      rowIndices = [];
-      for (let r = norm.minRow; r <= norm.maxRow; r++) {
-        const actualR = this.grid.rowIndices[r];
-        if (actualR !== undefined) rowIndices.push(actualR);
-      }
+    if (bulkRes.count === 0) {
+      this.showToast('Nie udało się wygenerować wariantów', 'warning');
+      return;
+    }
+
+    const totalPhotos = endIndex - startIndex + 1;
+
+    if (insertAction === 'newTab') {
+      const tabTitle = (baseTitle || 'Warianty').replace(/[\/\\?%*:|"<>]/g, '_').slice(0, 20) + '.csv';
+      this.createNewTab(tabTitle, [bulkRes.headers, ...bulkRes.rows]);
+      document.getElementById('imageUrlBuilderModal')?.classList.remove('active');
+      this.showToast(`Utworzono nowy arkusz z <b>${bulkRes.count}</b> produktami (${totalPhotos} zdjęć każdy)!`, 'success');
+      return;
     }
 
     const oldData = JSON.parse(JSON.stringify(tab.data));
     const oldHeaders = tab.headers ? [...tab.headers] : null;
 
-    const result = CSVOperations.generateImageUrls(tab.data, tab.headers, {
-      sourceColIndex,
-      urlTemplate,
-      startIndex,
-      endIndex,
-      namingMode,
-      customHeaderPattern,
-      clearExtraImageCols,
-      rowIndices,
-      hasHeader: tab.hasHeader
+    // Sprawdź czy bieżący arkusz jest pusty
+    const isSheetEmpty = !tab.data || tab.data.length === 0 || 
+      (tab.data.length <= 1 && (!tab.data[0] || tab.data[0].every(c => !c || c === ''))) ||
+      (tab.data.length === 25 && tab.data.every(r => r.every(c => !c || c === '')));
+
+    if (insertAction === 'replace' || isSheetEmpty) {
+      tab.data = [bulkRes.headers, ...bulkRes.rows];
+      tab.headers = [...bulkRes.headers];
+      tab.hasHeader = true;
+    } else {
+      // Dopisz do istniejącego arkusza
+      if (!tab.headers || tab.headers.length === 0) {
+        tab.headers = [...bulkRes.headers];
+      } else {
+        while (tab.headers.length < bulkRes.headers.length) {
+          tab.headers.push(bulkRes.headers[tab.headers.length]);
+        }
+      }
+
+      for (const r of tab.data) {
+        while (r.length < tab.headers.length) r.push('');
+      }
+
+      for (const newRow of bulkRes.rows) {
+        const rowPadded = [...newRow];
+        while (rowPadded.length < tab.headers.length) rowPadded.push('');
+        tab.data.push(rowPadded);
+      }
+    }
+
+    this.markTabUnsaved(tab);
+    tab.history.push({
+      type: 'FULL_TABLE_REPLACE',
+      oldData,
+      newData: JSON.parse(JSON.stringify(tab.data)),
+      oldHeaders,
+      newHeaders: tab.headers ? [...tab.headers] : null
     });
 
-    if (result.generatedCount > 0 || (result.headers && (!oldHeaders || result.headers.length !== oldHeaders.length))) {
-      tab.data = result.data;
-      tab.headers = result.headers;
-      this.markTabUnsaved(tab);
+    this.grid.setData(tab.data, tab.headers, false, tab.colWidths);
+    this.grid.autoFitAllColumns();
+    this.saveNow();
 
-      tab.history.push({
-        type: 'FULL_TABLE_REPLACE',
-        oldData,
-        newData: JSON.parse(JSON.stringify(tab.data)),
-        oldHeaders,
-        newHeaders: tab.headers ? [...tab.headers] : null
-      });
-
-      this.grid.setData(tab.data, tab.headers, false, tab.colWidths);
-      this.grid.autoFitAllColumns();
-      this.saveNow();
-
-      document.getElementById('imageUrlBuilderModal')?.classList.remove('active');
-      this.grid.wrapper?.focus({ preventScroll: true });
-
-      const countImages = endIndex - startIndex + 1;
-      this.showToast(`Wygenerowano <b>${result.generatedCount}</b> linków do zdjęć (${countImages} na produkt, <b>${result.rowsProcessed}</b> wierszy)!`, 'success');
-    } else {
-      this.showToast('Nie znaleziono wierszy ze SKU lub linki były już aktualne', 'info');
-      document.getElementById('imageUrlBuilderModal')?.classList.remove('active');
-    }
+    document.getElementById('imageUrlBuilderModal')?.classList.remove('active');
+    this.grid.wrapper?.focus({ preventScroll: true });
+    this.showToast(`Wygenerowano <b>${bulkRes.count}</b> produktów (<b>${bulkRes.count * totalPhotos}</b> linków do zdjęć)!`, 'success');
   }
 
   bindModals() {
@@ -2676,8 +2451,8 @@ class CSVApp {
 
     // Image URL Builder bindings
     const imgUrlModal = document.getElementById('imageUrlBuilderModal');
-    document.getElementById('imageUrlBuilderBtn')?.addEventListener('click', () => this.openImageUrlBuilderModal(null, 'bulk'));
-    document.getElementById('menuImageUrlBuilderBtn')?.addEventListener('click', () => this.openImageUrlBuilderModal(null, 'bulk'));
+    document.getElementById('imageUrlBuilderBtn')?.addEventListener('click', () => this.openImageUrlBuilderModal());
+    document.getElementById('menuImageUrlBuilderBtn')?.addEventListener('click', () => this.openImageUrlBuilderModal());
     document.getElementById('closeImageUrlModal')?.addEventListener('click', () => {
       imgUrlModal?.classList.remove('active');
     });
@@ -2686,14 +2461,10 @@ class CSVApp {
     });
     document.getElementById('doGenerateImgUrlsBtn')?.addEventListener('click', () => this.executeGenerateImageUrls());
 
-    document.getElementById('tabBulkProducts')?.addEventListener('click', () => this.setBuilderTab('bulk'));
-    document.getElementById('tabExistingCols')?.addEventListener('click', () => this.setBuilderTab('existing'));
-
     const updatePreviewHandler = () => this.updateImageUrlPreview();
     document.getElementById('bulkBaseTitle')?.addEventListener('input', updatePreviewHandler);
     document.getElementById('bulkBaseSku')?.addEventListener('input', updatePreviewHandler);
     document.getElementById('bulkColorsInput')?.addEventListener('input', updatePreviewHandler);
-    document.getElementById('imgUrlSourceCol')?.addEventListener('change', updatePreviewHandler);
     document.getElementById('imgUrlTemplate')?.addEventListener('input', updatePreviewHandler);
     document.getElementById('imgUrlStartIdx')?.addEventListener('input', updatePreviewHandler);
     document.getElementById('imgUrlEndIdx')?.addEventListener('input', updatePreviewHandler);

@@ -1,6 +1,6 @@
 {
   "name": "csv-studio",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Nowoczesny edytor i analityk arkuszy CSV, TSV i XLSX (PWA)",
   "scripts": {
     "start": "node server.js"

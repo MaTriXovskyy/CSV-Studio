@@ -299,7 +299,7 @@
           <div class="context-item-left"><i data-lucide="file-pen-line"></i><span>Zmień nazwę nagłówka</span></div>
         </div>
         <div class="context-item" data-action="openImageUrlBuilder">
-          <div class="context-item-left"><i data-lucide="images"></i><span>Generuj linki zdjęć (URL Builder)...</span></div>
+          <div class="context-item-left"><i data-lucide="images"></i><span>Generator linków do zdjęć produktów...</span></div>
         </div>
         <div class="context-item" data-action="colStats">
           <div class="context-item-left"><i data-lucide="bar-chart-2"></i><span>Statystyki kolumny</span></div>
