@@ -2182,13 +2182,13 @@ class CSVApp {
       tabExistingBtn?.classList.remove('active');
       if (bulkSection) bulkSection.style.display = 'block';
       if (existingSection) existingSection.style.display = 'none';
-      if (doGenerateBtnText) doGenerateBtnText.textContent = '⚡ Generuj masowo warianty';
+      if (doGenerateBtnText) doGenerateBtnText.textContent = 'Generuj masowo warianty';
     } else {
       tabExistingBtn?.classList.add('active');
       tabBulkBtn?.classList.remove('active');
       if (bulkSection) bulkSection.style.display = 'none';
       if (existingSection) existingSection.style.display = 'block';
-      if (doGenerateBtnText) doGenerateBtnText.textContent = '🖼️ Wypełnij linki do zdjęć';
+      if (doGenerateBtnText) doGenerateBtnText.textContent = 'Wypełnij linki do zdjęć';
     }
 
     this.updateImageUrlPreview();
@@ -2229,12 +2229,12 @@ class CSVApp {
 
       if (colors.length === 0) {
         previewBox.innerHTML = '<div style="color:var(--text-muted); font-size:11px;">Wpisz co najmniej jeden kod koloru / wariantu (np. <code>C01, C02, C03</code> lub <code>C01-C10</code>)...</div>';
-        if (doGenerateBtnText) doGenerateBtnText.textContent = '⚡ Generuj masowo warianty';
+        if (doGenerateBtnText) doGenerateBtnText.textContent = 'Generuj masowo warianty';
         return;
       }
 
       if (doGenerateBtnText) {
-        doGenerateBtnText.textContent = `⚡ Generuj masówkę (${colors.length} wariantów × ${photoCount} zdjęć)`;
+        doGenerateBtnText.textContent = `Generuj masówkę (${colors.length} wariantów × ${photoCount} zdjęć)`;
       }
 
       let previewHTML = `<div style="margin-bottom:8px; color:var(--text-secondary); font-size:11px; font-weight:600; display:flex; align-items:center; gap:8px;">
@@ -2268,8 +2268,10 @@ class CSVApp {
 
         previewHTML += `
           <div style="background:var(--bg-secondary); border-radius:6px; padding:6px 8px; margin-bottom:6px; border:1px solid var(--border-color);">
-            <div style="font-size:11.5px; font-weight:bold; color:var(--accent-primary); margin-bottom:4px;">
-              📦 ${escapedTitle} <span style="font-size:10.5px; color:var(--text-muted); font-weight:normal; margin-left:6px;">[Symbol: ${escapedSku}]</span>
+            <div style="font-size:11.5px; font-weight:bold; color:var(--accent-primary); margin-bottom:4px; display:flex; align-items:center;">
+              <i data-lucide="package" style="width:13px; height:13px; margin-right:5px; flex-shrink:0;"></i>
+              <span>${escapedTitle}</span>
+              <span style="font-size:10.5px; color:var(--text-muted); font-weight:normal; margin-left:6px;">[Symbol: ${escapedSku}]</span>
             </div>
         `;
 
@@ -2313,6 +2315,7 @@ class CSVApp {
       }
 
       previewBox.innerHTML = previewHTML;
+      this.refreshIcons();
       return;
     }
 
