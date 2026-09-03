@@ -1,13 +1,12 @@
 {
   "name": "csv-studio",
-  "version": "2.8.0",
+  "version": "2.8.1",
   "description": "Nowoczesny edytor i analityk arkuszy CSV, TSV i XLSX dla Windows i przeglądarki",
   "main": "electron/main.js",
   "scripts": {
     "start": "node server.js",
     "desktop": "electron .",
-    "dist:win": "electron-builder --win nsis",
-    "release:win": "electron-builder --win nsis --publish always"
+    "dist:win": "electron-builder --win nsis"
   },
   "keywords": [
     "csv",

@@ -20,10 +20,10 @@ jobs:
 
     steps:
       - name: Pobierz repozytorium
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Ustaw Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -37,7 +37,32 @@ jobs:
           node --check electron/preload.js
           node --check js/app.js
 
-      - name: Zbuduj i opublikuj instalator
-        run: npm run release:win
+      - name: Utwórz tag wydania
+        shell: pwsh
+        run: |
+          $version = node -p "require('./package.json').version"
+          $tag = "v$version"
+          git fetch --tags --force
+          if ([string]::IsNullOrWhiteSpace((git tag --list $tag))) {
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag $tag
+            git push origin $tag
+          }
+          "RELEASE_TAG=$tag" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Zbuduj instalator
+        run: npm run dist:win
+
+      - name: Opublikuj wydanie GitHub
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem -LiteralPath dist -Filter 'CSV-Studio-Setup-*.exe' | Select-Object -First 1
+          $blockmap = Get-ChildItem -LiteralPath dist -Filter 'CSV-Studio-Setup-*.exe.blockmap' | Select-Object -First 1
+          if (-not $installer -or -not $blockmap -or -not (Test-Path -LiteralPath 'dist/latest.yml')) {
+            throw 'Brak kompletnego zestawu plików wydania.'
+          }
+          $assets = @($installer.FullName, $blockmap.FullName, (Resolve-Path -LiteralPath 'dist/latest.yml').Path)
+          gh release create $env:RELEASE_TAG @assets --verify-tag --generate-notes --title "CSV Studio $env:RELEASE_TAG" --latest
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
