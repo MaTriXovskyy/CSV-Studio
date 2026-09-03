@@ -691,6 +691,18 @@ const CSVOperations = {
   /**
    * Masowy generator produktów i wariantów ze zdjęciami (Tytuł + Symbol + Zmienne ścieżki + Lista Kolorów)
    */
+  resolveVariantFabric(color, fallbackFabric = '', fabricByVariant = false) {
+    if (!fabricByVariant) return fallbackFabric;
+
+    const fabricByPrefix = {
+      T: 'ROYAL',
+      C: 'CORD',
+      B: 'EGON'
+    };
+    const prefix = String(color || '').trim().charAt(0).toUpperCase();
+    return fabricByPrefix[prefix] || fallbackFabric;
+  },
+
   generateBulkProducts(options = {}) {
     const {
       baseTitle = '',
@@ -700,6 +712,7 @@ const CSVOperations = {
       productSymbol = '',
       channel = '',
       fabric = '',
+      fabricByVariant = false,
       urlTemplate = '',
       startIndex = 1,
       endIndex = 9,
@@ -733,6 +746,8 @@ const CSVOperations = {
     // 2. Generuj wiersze dla każdego koloru
     const rows = [];
     for (const color of colors) {
+      const variantFabric = this.resolveVariantFabric(color, fabric, fabricByVariant);
+
       // Format Tytułu
       let title = baseTitle.trim();
       if (title.includes('{KOLOR}') || title.includes('{COLOR}')) {
@@ -743,7 +758,7 @@ const CSVOperations = {
         title = color;
       }
       if (title.includes('{TKANINA}') || title.includes('{FABRIC}')) {
-        title = title.replace(/\{TKANINA\}|\{FABRIC\}/gi, fabric || '');
+        title = title.replace(/\{TKANINA\}|\{FABRIC\}/gi, variantFabric || '');
       }
       if (title.includes('{KANAL}') || title.includes('{MARKA}')) {
         title = title.replace(/\{KANAL\}|\{MARKA\}/gi, channel || '');
@@ -759,7 +774,7 @@ const CSVOperations = {
         sku = color;
       }
       if (sku.includes('{TKANINA}') || sku.includes('{FABRIC}')) {
-        sku = sku.replace(/\{TKANINA\}|\{FABRIC\}/gi, fabric || '');
+        sku = sku.replace(/\{TKANINA\}|\{FABRIC\}/gi, variantFabric || '');
       }
 
       const row = [title, sku];
@@ -775,7 +790,7 @@ const CSVOperations = {
             .replace(/\{GRUPA\}|\{GROUP\}|\{FOLDER\}|\{KATEGORIA\}/gi, group || '')
             .replace(/\{SYMBOL_PRODUKTU\}|\{SYMBOL\}|\{MODEL\}|\{PRODUKT\}/gi, productSymbol || '')
             .replace(/\{KANAL\}|\{CHANNEL\}|\{MARKA\}|\{BRAND\}/gi, channel || '')
-            .replace(/\{TKANINA\}|\{FABRIC\}|\{MATERIAL\}/gi, fabric || '')
+            .replace(/\{TKANINA\}|\{FABRIC\}|\{MATERIAL\}/gi, variantFabric || '')
             .replace(/\{SKU\}|\{VAL\}/gi, sku)
             .replace(/\{KOLOR\}|\{COLOR\}/gi, color)
             .replace(/\{N0\}/g, n0Str)
