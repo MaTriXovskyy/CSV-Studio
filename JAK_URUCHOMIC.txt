@@ -11,7 +11,13 @@ Aplikacja działa w 100% lokalnie na Twoim komputerze (offline).
 ------------------------------------------------------------------------
 
 * SYSTEM WINDOWS:
-  -> Kliknij dwukrotnie plik: "Uruchom_Windows.bat" (lub "uruchom.vbs")
+  -> Pobierz najnowszy instalator CSV-Studio-Setup-x.x.x.exe z:
+     https://github.com/MaTriXovskyy/CSV-Studio/releases/latest
+  -> Zainstaluj go tylko raz. Kolejne wersje program pobiera automatycznie
+     i instaluje po bezpiecznym zamknięciu aplikacji.
+
+  Wersję przeglądarkową można nadal uruchomić przez
+  "Uruchom_Windows.bat" lub "uruchom.vbs".
 
 * SYSTEM macOS (Apple Mac):
   -> Kliknij dwukrotnie plik: "Uruchom_Mac.command"

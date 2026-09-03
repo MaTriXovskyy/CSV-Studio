@@ -1,10 +1,16 @@
-# CSV Studio 🚀 (PWA)
+# CSV Studio 🚀 (Windows + PWA)
 
-Nowoczesny, szybki, lekki i intuicyjny edytor arkuszy CSV, TSV i XLSX jako **Progressive Web App (PWA)** dla Windows.
+Nowoczesny i intuicyjny edytor arkuszy CSV, TSV i XLSX jako aplikacja Windows oraz Progressive Web App.
 
 ---
 
-## 🚀 Jak Uruchomić:
+## 🚀 Windows — zalecana instalacja
+
+1. Pobierz najnowszy plik `CSV-Studio-Setup-x.x.x.exe` z sekcji [Releases](https://github.com/MaTriXovskyy/CSV-Studio/releases/latest).
+2. Uruchom instalator i otwieraj pliki bezpośrednio z programu lub z Eksploratora Windows.
+3. Kolejne wydania są pobierane automatycznie i instalowane po zamknięciu programu.
+
+## Wersja przeglądarkowa / PWA
 
 * **Windows**: Kliknij dwukrotnie plik **`Uruchom_Windows.bat`** (lub `uruchom.vbs`).
 * **macOS (Mac)**: Kliknij dwukrotnie plik **`Uruchom_Mac.command`**.

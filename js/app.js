@@ -96,6 +96,7 @@ class CSVApp {
           hasHeader: !!t.hasHeader,
           delimiter: t.delimiter || ';',
           encoding: t.encoding || 'utf-8',
+          filePath: t.filePath || null,
           colWidths: t.colWidths || null,
           viewState: t.viewState || null,
           history: new HistoryManager(),
@@ -213,6 +214,7 @@ class CSVApp {
       hasHeader: hasHeader,
       delimiter: delimiter,
       encoding: encoding,
+      filePath: options.filePath || null,
       colWidths: options.colWidths || null,
       viewState: options.viewState || null,
       history: new HistoryManager(),
@@ -614,7 +616,7 @@ class CSVApp {
     reader.readAsArrayBuffer(file);
   }
 
-  loadXLSXFile(buffer, filename) {
+  loadXLSXFile(buffer, filename, handle = null) {
     if (typeof XLSX === 'undefined') {
       this.showToast('Brak biblioteki XLSX do odczytu pliku', 'error');
       return;
@@ -626,10 +628,11 @@ class CSVApp {
       const ws = wb.Sheets[firstSheet];
       const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
-      this.createNewTab(filename, data, {
+      const tab = this.createNewTab(filename, data, {
         delimiter: ';',
         encoding: 'utf-8'
       });
+      if (tab && handle) tab.fileHandle = handle;
       this.grid.autoFitAllColumns();
       this.saveNow();
       this.showToast(`Wczytano arkusz <b>${filename}</b>`, 'success');
@@ -639,12 +642,12 @@ class CSVApp {
     }
   }
 
-  loadFileData(text, filename, filePath = null) {
+  loadFileData(text, filename, filePath = null, encoding = 'utf-8') {
     const delimiter = CSVParser.detectDelimiter(text);
     const parsed = CSVParser.parse(text, { delimiter });
     this.createNewTab(filename, parsed.data, {
       delimiter: delimiter,
-      encoding: 'utf-8',
+      encoding: encoding,
       filePath: filePath
     });
     this.grid.autoFitAllColumns();
@@ -664,7 +667,7 @@ class CSVApp {
       const ws = wb.Sheets[firstSheet];
       const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
-      this.createNewTab(filename, data, {
+      const tab = this.createNewTab(filename, data, {
         delimiter: ';',
         encoding: 'utf-8',
         filePath: filePath
@@ -672,26 +675,59 @@ class CSVApp {
       this.grid.autoFitAllColumns();
       this.saveNow();
       this.showToast(`Wczytano arkusz <b>${filename}</b>`, 'success');
+      return tab;
     } catch (e) {
       console.error(e);
       this.showToast('Błąd odczytu pliku XLSX: ' + e.message, 'error');
+      return null;
     }
+  }
+
+  base64ToArrayBuffer(base64) {
+    const binaryString = atob(base64 || '');
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+
+  arrayBufferToBase64(buffer) {
+    const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+    const chunkSize = 0x8000;
+    let binaryString = '';
+    for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+      binaryString += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+    }
+    return btoa(binaryString);
+  }
+
+  loadElectronFile(file) {
+    if (!file || !file.binaryBase64) return;
+
+    const buffer = this.base64ToArrayBuffer(file.binaryBase64);
+    if (file.isBinary) {
+      this.loadXLSXData(buffer, file.filename, file.filePath);
+      return;
+    }
+
+    const encInfo = CSVParser.detectEncoding(buffer);
+    const text = CSVParser.decodeBuffer(buffer, encInfo.encoding);
+    this.loadFileData(text, file.filename, file.filePath, encInfo.encoding);
   }
 
   initPWAAndElectron() {
     // 1. Electron Integration
     if (window.electronAPI && window.electronAPI.isElectron) {
       window.electronAPI.onFileOpenedFromSystem((file) => {
-        if (file.isBinary) {
-          const binaryString = atob(file.binaryBase64);
-          const len = binaryString.length;
-          const bytes = new Uint8Array(len);
-          for (let i = 0; i < len; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
-          this.loadXLSXData(bytes.buffer, file.filename, file.filePath);
-        } else {
-          this.loadFileData(file.content, file.filename, file.filePath);
+        this.loadElectronFile(file);
+      });
+
+      window.electronAPI.onUpdateStatus((update) => {
+        if (update.status === 'available') {
+          this.showToast(`Dostępna jest aktualizacja <b>v${update.version}</b>. Pobieranie w tle...`, 'info');
+        } else if (update.status === 'downloaded') {
+          this.showToast(`Pobrano aktualizację <b>v${update.version}</b>. Zostanie zainstalowana po zamknięciu programu.`, 'success');
         }
       });
     }
@@ -742,17 +778,7 @@ class CSVApp {
       const files = await window.electronAPI.openFileDialog();
       if (files && files.length > 0) {
         for (const file of files) {
-          if (file.isBinary) {
-            const binaryString = atob(file.binaryBase64);
-            const len = binaryString.length;
-            const bytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) {
-              bytes[i] = binaryString.charCodeAt(i);
-            }
-            this.loadXLSXData(bytes.buffer, file.filename, file.filePath);
-          } else {
-            this.loadFileData(file.content, file.filename, file.filePath);
-          }
+          this.loadElectronFile(file);
         }
       }
       return;
@@ -795,7 +821,7 @@ class CSVApp {
       const buffer = e.target.result;
 
       if (file.name.toLowerCase().endsWith('.xlsx') || file.name.toLowerCase().endsWith('.xls')) {
-        this.loadXLSXFile(buffer, file.name);
+        this.loadXLSXFile(buffer, file.name, handle);
         return;
       }
 
@@ -824,21 +850,53 @@ class CSVApp {
     if (!tab) return;
 
     if (tab.filename.toLowerCase().endsWith('.xlsx') || tab.filename.toLowerCase().endsWith('.xls')) {
-      this.exportActiveTabXLSX();
+      await this.exportActiveTabXLSX();
       return;
     }
 
     await this.saveCurrentTabCSV();
   }
 
-  exportActiveTabXLSX() {
+  async exportActiveTabXLSX() {
     const tab = this.getActiveTab();
     if (!tab) return;
     if (this.grid?.isEditing) {
       this.grid.commitEdit();
     }
-    const xlsxName = tab.filename.replace(/\.[^/.]+$/, "") + ".xlsx";
-    CSVExporter.exportToXLSX(tab.data, xlsxName, tab.hasHeader);
+    const xlsxName = tab.filename.replace(/\.[^/.]+$/, '') + '.xlsx';
+
+    if (window.electronAPI && window.electronAPI.isElectron) {
+      try {
+        const ws = XLSX.utils.aoa_to_sheet(tab.data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Arkusz 1');
+        const xlsxBytes = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const binaryBase64 = this.arrayBufferToBase64(xlsxBytes);
+
+        let result;
+        if (tab.filePath && tab.filename.toLowerCase().endsWith('.xlsx')) {
+          result = await window.electronAPI.saveBinaryDirect(tab.filePath, binaryBase64);
+        } else {
+          result = await window.electronAPI.saveBinaryDialog(xlsxName, binaryBase64);
+        }
+
+        if (result?.success) {
+          tab.filePath = result.filePath;
+          tab.filename = result.filename;
+          this.markTabSaved(tab);
+          this.saveNow();
+          this.showToast(`Zapisano arkusz: <b>${tab.filename}</b>`, 'success');
+        } else if (!result?.canceled) {
+          this.showToast('Nie udało się zapisać arkusza XLSX: ' + (result?.error || 'nieznany błąd'), 'error');
+        }
+      } catch (error) {
+        console.error('Błąd zapisu XLSX:', error);
+        this.showToast('Nie udało się zapisać arkusza XLSX: ' + error.message, 'error');
+      }
+      return;
+    }
+
+    CSVExporter.exportToXLSX(tab.data, xlsxName, 'Arkusz 1');
     this.markTabSaved(tab);
     this.showToast(`Wyeksportowano do pliku: <b>${xlsxName}</b>`, 'success');
   }

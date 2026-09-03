@@ -26,6 +26,7 @@ const CSVStorage = {
       hasHeader: tab.hasHeader,
       delimiter: tab.delimiter,
       encoding: tab.encoding,
+      filePath: tab.filePath || null,
       colWidths: tab.colWidths || null,
       viewState: tab.viewState || null
     }));

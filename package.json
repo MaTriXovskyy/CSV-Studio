@@ -1,9 +1,13 @@
 {
   "name": "csv-studio",
-  "version": "2.7.0",
-  "description": "Nowoczesny edytor i analityk arkuszy CSV, TSV i XLSX (PWA)",
+  "version": "2.8.0",
+  "description": "Nowoczesny edytor i analityk arkuszy CSV, TSV i XLSX dla Windows i przeglądarki",
+  "main": "electron/main.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "desktop": "electron .",
+    "dist:win": "electron-builder --win nsis",
+    "release:win": "electron-builder --win nsis --publish always"
   },
   "keywords": [
     "csv",
@@ -15,8 +19,85 @@
   "author": "matrixovskyy",
   "license": "MIT",
   "dependencies": {
+    "electron-updater": "^6.8.9",
+    "iconv-lite": "^0.7.3",
     "lucide": "^1.33.0",
     "papaparse": "^5.6.0",
     "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "electron": "^44.1.1",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "pl.matrixovskyy.csvstudio",
+    "productName": "CSV Studio",
+    "artifactName": "CSV-Studio-Setup-${version}.${ext}",
+    "asar": true,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "index.html",
+      "manifest.json",
+      "css/**/*",
+      "js/**/*",
+      "assets/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "CSV Studio",
+      "deleteAppDataOnUninstall": false
+    },
+    "fileAssociations": [
+      {
+        "ext": [
+          "csv",
+          "dsv"
+        ],
+        "name": "Arkusz CSV",
+        "description": "Arkusz danych CSV",
+        "role": "Editor"
+      },
+      {
+        "ext": "tsv",
+        "name": "Arkusz TSV",
+        "description": "Arkusz danych TSV",
+        "role": "Editor"
+      },
+      {
+        "ext": [
+          "xlsx",
+          "xls"
+        ],
+        "name": "Arkusz Excel",
+        "description": "Arkusz programu Microsoft Excel",
+        "role": "Editor"
+      }
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "MaTriXovskyy",
+        "repo": "CSV-Studio",
+        "releaseType": "release"
+      }
+    ]
   }
 }
